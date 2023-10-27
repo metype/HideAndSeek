@@ -5,13 +5,16 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
+import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
+import org.bukkit.util.Vector;
 
 import java.util.Objects;
 import java.util.logging.Level;
@@ -72,5 +75,16 @@ public class HideAndSeekEventHandler implements Listener {
                 }
             }
         }
+    }
+
+    @EventHandler
+    public void OnPlayerInteract(PlayerInteractEvent e) {
+        if(e.getAction() == Action.PHYSICAL) {
+            if(e.getPlayer().getLocation().toVector().isInAABB(new Vector(-85, 96, -105), new Vector(-82, 96, -104))) {
+                //logic for standing on pressure plate
+                e.getPlayer().sendMessage("Hello!");
+            }
+        }
+
     }
 }

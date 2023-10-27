@@ -1,0 +1,14 @@
+name: Hide_And_Seek
+version: '${project.version}'
+main: com.metype.hidenseek.Main
+api-version: '1.20'
+
+commands:
+  hidenseek:
+    aliases: ["hns"]
+    description: "The main command for Hide & Seek"
+
+permissions:
+  hidenseek.save:
+    description: Allows a user to save the current state of all games in the config
+    default: op

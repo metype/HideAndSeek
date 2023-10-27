@@ -1,0 +1,6 @@
+{
+  "error.invalid_subcommand": "&8[&6Hide And Seek&8] &c%0 is not a valid subcommand.",
+  "error.no_permission": "&8[&6Hide And Seek&8] &4You do not have permission to execute this command.",
+  "success.command.save": "&8[&6Hide And Seek&8] &aSuccessfully saved all games!",
+  "success.command.reload": "&8[&6Hide And Seek&8] &aSuccessfully reloaded configs!"
+}

@@ -1,6 +1,5 @@
 package com.metype.hidenseek.Commands.SubCommands;
 
-import com.metype.hidenseek.GameManager;
 import com.metype.hidenseek.Utilities.MessageManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;

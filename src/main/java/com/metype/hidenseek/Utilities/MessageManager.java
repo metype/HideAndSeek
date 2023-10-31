@@ -44,7 +44,7 @@ public class MessageManager {
         } catch(IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Could not read the contents of messages.json, this is bad. Real bad.");
         }
-        messages = file.fromJson(fileContents.toString(), Map.class);
+        messages = file.<Map<String, String>>fromJson(fileContents.toString(), Map.class);
     }
 
     public static String GetMessageByKey(String key, Object... args) {

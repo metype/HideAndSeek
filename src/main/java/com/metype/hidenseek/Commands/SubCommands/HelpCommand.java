@@ -1,11 +1,8 @@
 package com.metype.hidenseek.Commands.SubCommands;
 
-import com.metype.hidenseek.GameManager;
-import com.metype.hidenseek.Utilities.MessageManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
 
 public class HelpCommand implements CommandExecutor {
 

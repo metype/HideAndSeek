@@ -12,6 +12,10 @@ public class Polygon {
             this.x = x;
             this.y = y;
         }
+
+        public String toString() {
+            return "(" + x + ", " + y + ")";
+        }
     }
 
     public static class Line {
@@ -27,10 +31,16 @@ public class Polygon {
 
     public Polygon() {
         points = new Point[3];
+        for(int i=0; i<3; i++){
+            points[i] = new Point(0,0);
+        }
     }
 
     public Polygon(int size) {
         points = new Point[size];
+        for(int i=0; i<size; i++){
+            points[i] = new Point(0,0);
+        }
     }
 
     private int onLine(Line l1, Point p)

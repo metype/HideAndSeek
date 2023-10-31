@@ -9,6 +9,15 @@ commands:
     description: "The main command for Hide & Seek"
 
 permissions:
-  hidenseek.save:
+  hns.save:
     description: Allows a user to save the current state of all games in the config
+    default: op
+  hns.game.create:
+    description: Allows a user to create new games, does not imply the permission hns.game.edit
+    default: op
+  hns.game.edit:
+    description: Allows a user to edit created gamed, does not imply the permission hns.game.create
+    default: op
+  hns.game.start:
+    description: Allows a user to start games.
     default: op

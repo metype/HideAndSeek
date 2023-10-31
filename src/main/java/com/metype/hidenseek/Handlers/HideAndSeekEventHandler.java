@@ -1,11 +1,11 @@
 package com.metype.hidenseek.Handlers;
 
 import com.metype.hidenseek.PluginStorage;
+import com.metype.hidenseek.Utilities.GameManager;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
@@ -14,7 +14,6 @@ import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
-import org.bukkit.util.Vector;
 
 import java.util.Objects;
 import java.util.logging.Level;
@@ -28,7 +27,9 @@ public class HideAndSeekEventHandler implements Listener {
     }
     @EventHandler
     public void onHit(EntityDamageByEntityEvent e) {
-        if(!PluginStorage.isGameRunning) return;
+        if(!(e.getEntity() instanceof Player && e.getDamager() instanceof Player)) return;
+        if(!GameManager.IsPlayerInAnyGame(e.getEntity().getUniqueId())) return;
+
         if (e.getEntity() instanceof Player && e.getDamager() instanceof Player) {
             Player whoWasHit = (Player) e.getEntity();
             Player whoHit = (Player) e.getDamager();
@@ -56,7 +57,9 @@ public class HideAndSeekEventHandler implements Listener {
 
     @EventHandler
     public void onEffectEnd(EntityPotionEffectEvent e) {
-        if(!PluginStorage.isGameRunning) return;
+        if(!(e.getEntity() instanceof Player)) return;
+        if(!GameManager.IsPlayerInAnyGame(e.getEntity().getUniqueId())) return;
+
         if(e.getCause() == EntityPotionEffectEvent.Cause.EXPIRATION) {
             Scoreboard sb = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
             Team hidersTeam = null, seekersTeam = null;
@@ -79,12 +82,6 @@ public class HideAndSeekEventHandler implements Listener {
 
     @EventHandler
     public void OnPlayerInteract(PlayerInteractEvent e) {
-        if(e.getAction() == Action.PHYSICAL) {
-            if(e.getPlayer().getLocation().toVector().isInAABB(new Vector(-85, 96, -105), new Vector(-82, 96, -104))) {
-                //logic for standing on pressure plate
-                e.getPlayer().sendMessage("Hello!");
-            }
-        }
 
     }
 }

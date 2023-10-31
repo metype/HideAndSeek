@@ -3,6 +3,7 @@ package com.metype.hidenseek;
 import com.metype.hidenseek.Commands.HideAndSeek;
 import com.metype.hidenseek.Handlers.HideAndSeekEventHandler;
 import com.metype.hidenseek.Handlers.HideAndSeekTabComplete;
+import com.metype.hidenseek.Utilities.GameManager;
 import com.metype.hidenseek.Utilities.MessageManager;
 import org.bukkit.plugin.java.JavaPlugin;
 

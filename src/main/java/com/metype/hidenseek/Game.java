@@ -6,15 +6,14 @@ import java.util.UUID;
 public class Game {
     public Polygon gameBounds = new Polygon();
 
-    public int minHeightBounds, maxHeightBounds;
-
     public String gameName = "";
 
     public ArrayList<UUID> players = new ArrayList<>();
 
-    public boolean isActive;
+    public boolean isActive, invisibleSeekers;
 
-    public int timeUntilStart;
+    public int minHeightBounds, maxHeightBounds, timeUntilStart, gameLength = 300,
+            seekerSpeedStrength = 2, outOfBoundsTime = 10;
 
     public String toString() {
         StringBuilder playerList = new StringBuilder("[");

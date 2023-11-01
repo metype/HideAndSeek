@@ -6,6 +6,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.plugin.Plugin;
 
 import java.io.*;
+import java.nio.channels.FileChannel;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.logging.Level;
@@ -21,18 +22,27 @@ public class MessageManager {
         assert plugin != null;
         File messagesFile = new File(plugin.getDataFolder(), "messages.json");
         if(!messagesFile.exists()) {
-            try {
-                messagesFile.createNewFile();
-                try (InputStream in = plugin.getClass().getResourceAsStream("/messages.json")) {
-                    assert in != null;
-                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(in));
-                         FileWriter writer = new FileWriter(messagesFile)) {
-                        writer.write(reader.lines().collect(Collectors.joining(System.lineSeparator())));
-                    }
+            ResetMessageConfig();
+        }
+    }
+
+    public static void ResetMessageConfig() {
+        File messagesFile = new File(plugin.getDataFolder(), "messages.json");
+        try {
+            if(!messagesFile.createNewFile()) {
+                try (FileChannel outChan = new FileOutputStream(messagesFile, true).getChannel()) {
+                    outChan.truncate(0);
                 }
-            } catch (IOException e) {
-                plugin.getLogger().log(Level.SEVERE, "Could not create messages.json and one was not found!");
             }
+            try (InputStream in = plugin.getClass().getResourceAsStream("/messages.json")) {
+                assert in != null;
+                try (BufferedReader reader = new BufferedReader(new InputStreamReader(in));
+                     FileWriter writer = new FileWriter(messagesFile)) {
+                    writer.write(reader.lines().collect(Collectors.joining(System.lineSeparator())));
+                }
+            }
+        } catch (IOException e) {
+            plugin.getLogger().log(Level.SEVERE, "Could not create messages.json and one was not found!");
         }
 
         Gson file = new Gson();

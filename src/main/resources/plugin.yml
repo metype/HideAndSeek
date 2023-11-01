@@ -12,6 +12,12 @@ permissions:
   hns.save:
     description: Allows a user to save the current state of all games in the config
     default: op
+  hns.reset:
+    description: Allows the resetting of config files.
+    default: op
+  hns.reload:
+    description: Allows the reloading of config files.
+    default: op
   hns.game.create:
     description: Allows a user to create new games, does not imply the permission hns.game.edit
     default: op

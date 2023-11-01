@@ -1,9 +1,6 @@
 package com.metype.hidenseek.Commands;
 
-import com.metype.hidenseek.Commands.SubCommands.GameCommand;
-import com.metype.hidenseek.Commands.SubCommands.HelpCommand;
-import com.metype.hidenseek.Commands.SubCommands.ReloadCommand;
-import com.metype.hidenseek.Commands.SubCommands.SaveCommand;
+import com.metype.hidenseek.Commands.SubCommands.*;
 import com.metype.hidenseek.Utilities.MessageManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -13,7 +10,6 @@ import java.util.Arrays;
 
 public class HideAndSeek implements CommandExecutor {
 
-    // This method is called, when somebody uses our command
     @Override
     public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
         if(args.length < 1) {
@@ -30,6 +26,9 @@ public class HideAndSeek implements CommandExecutor {
         }
         if(args[0].equalsIgnoreCase("reload")) {
             return (new ReloadCommand()).onCommand(sender, command, label, Arrays.copyOfRange(args, 1, args.length));
+        }
+        if(args[0].equalsIgnoreCase("reset_config")) {
+            return (new ResetConfigCommand()).onCommand(sender, command, label, Arrays.copyOfRange(args, 1, args.length));
         }
         sender.sendMessage(MessageManager.GetMessageByKey("error.invalid_subcommand", args[0]));
         return true;

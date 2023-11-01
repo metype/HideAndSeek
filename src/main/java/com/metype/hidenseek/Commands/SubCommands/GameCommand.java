@@ -15,7 +15,6 @@ import java.util.regex.Pattern;
 
 public class GameCommand implements CommandExecutor {
 
-    // This method is called, when somebody uses our command
     @Override
     public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String[] args) {
         StringBuilder argsString = new StringBuilder();
@@ -34,7 +33,7 @@ public class GameCommand implements CommandExecutor {
             if(!sender.hasPermission("hns.game.start")) {
                 sender.sendMessage(MessageManager.GetMessageByKey("error.no_permission"));
             }
-            if(args.length == 1) {
+            if(args.length < 3) {
                 sender.sendMessage(MessageManager.GetMessageByKey("error.not_enough_args"));
                 return false;
             }

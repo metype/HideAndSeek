@@ -3,9 +3,10 @@
   "error.no_permission": "&8[&6Hide And Seek&8] &4You do not have permission to execute this command.",
   "error.not_enough_args": "&8[&6Hide And Seek&8] &4Not enough arguments for command.",
   "error.game.no_exist" : "&8[&6Hide And Seek&8] &4The specified game does not exist.",
-  "error.command.game.create.bad_key": "&8[&6Hide And Seek&8] &4Game keys must only contain alphanumeric characters (a-Z 0-9)",
+  "error.command.game.create.bad_key": "&8[&6Hide And Seek&8] &4Game keys must only contain alphanumeric characters (a-Z 0-9) and underscores",
   "success.command.save": "&8[&6Hide And Seek&8] &aSuccessfully saved all games!",
   "success.command.game.create": "&8[&6Hide And Seek&8] &aSuccessfully created the game &r%1$s (&a%2$s&r)!\nRemember to configure it with &a/hns game edit %1$s",
   "success.command.game.start": "&8[&6Hide And Seek&8] &aStarting game %1$s in %2$s",
-  "success.command.reload": "&8[&6Hide And Seek&8] &aSuccessfully reloaded configs!"
+  "success.command.reload": "&8[&6Hide And Seek&8] &aSuccessfully reloaded configs!",
+  "success.command.reset.messages": "&8[&6Hide And Seek&8] &aSuccessfully reset messages config!"
 }

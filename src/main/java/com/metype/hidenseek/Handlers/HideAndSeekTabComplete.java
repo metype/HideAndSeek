@@ -7,9 +7,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class HideAndSeekTabComplete implements TabCompleter {
 
@@ -32,6 +30,12 @@ public class HideAndSeekTabComplete implements TabCompleter {
         gameCreateCommand.AddSubCommands(gameCreateNameCommand);
         gameCommand.AddSubCommands(gameCreateCommand);
 
+        CommandTree gameEditCommand = new CommandTree("edit");
+        CommandTree gameEditNameCommand = new CommandTree(GameManager::GetGames);
+        gameEditNameCommand.SetArgs("gameLength", "seekerSpeedStrength", "invisibleSeekers");
+        gameEditCommand.AddSubCommands(gameEditNameCommand);
+        gameCommand.AddSubCommands(gameEditCommand);
+
         CommandTree saveCommand = new CommandTree("save");
 
         CommandTree reloadCommand = new CommandTree("reload");
@@ -49,7 +53,10 @@ public class HideAndSeekTabComplete implements TabCompleter {
 
         helpCommand.AddSubCommands(helpPageCommand, helpGameCommand, helpSaveCommand, helpReloadCommand);
 
-        hideAndSeekCommandTree.AddSubCommands(gameCommand, saveCommand, helpCommand, reloadCommand);
+        CommandTree resetConfigCommand = new CommandTree("reset_config");
+        resetConfigCommand.SetArgs("messages");
+
+        hideAndSeekCommandTree.AddSubCommands(gameCommand, saveCommand, helpCommand, reloadCommand, resetConfigCommand);
     }
 
 
@@ -97,6 +104,9 @@ public class HideAndSeekTabComplete implements TabCompleter {
                 }
             }
         }
+
+        //Sorts the suggestions alphabetically, just a preference.
+        list.sort(String::compareToIgnoreCase);
 
         return list;
     }

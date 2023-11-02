@@ -57,12 +57,12 @@ public class GameCommand implements CommandExecutor {
                 sender.sendMessage(MessageManager.GetMessageByKey("error.no_permission"));
                 return false;
             }
-            if(args.length <= 2) {
+            if(args.length <= 3) {
                 sender.sendMessage(MessageManager.GetMessageByKey("error.not_enough_args"));
                 return false;
             }
 
-            return CreateGame(sender, args[1], args[2]);
+            return EditGame(sender, args[1], args[2], args[3]);
         }
         return false;
     }
@@ -78,7 +78,7 @@ public class GameCommand implements CommandExecutor {
     }
 
     private boolean CreateGame(CommandSender sender, String gameKey, String gameName) {
-        if(!gameKey.replaceAll("([\\\0-/]|[:-@]|[\\[-`]|[{-\\\177])", "_").equals(gameKey)) {
+        if(!gameKey.replaceAll("([\0-/]|[:-@]|[\\[-`]|[{-\177])", "_").equals(gameKey)) {
             sender.sendMessage(MessageManager.GetMessageByKey("error.command.game.create.bad_key", gameKey));
         }
         Game newGame = new Game();
@@ -94,6 +94,14 @@ public class GameCommand implements CommandExecutor {
         if(game == null) {
             sender.sendMessage(MessageManager.GetMessageByKey("error.game.no_exist", gameKey));
             return false;
+        }
+        try {
+            Object val = game.SetProperty(argName, argValue);
+            sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.edit", game.gameName, argName, val.toString()));
+        } catch (NoSuchFieldException e) {
+            sender.sendMessage(MessageManager.GetMessageByKey("error.invalid_property_name", argName));
+        } catch (IllegalAccessException e) {
+            sender.sendMessage(MessageManager.GetMessageByKey("error.invalid_property_value", argName, argValue));
         }
         return true;
     }

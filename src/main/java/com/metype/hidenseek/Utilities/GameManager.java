@@ -15,18 +15,49 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.*;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import com.google.gson.Gson;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class GameManager {
     private static HashMap<String, Game> games;
+
+    private static ArrayList<String> activeGames;
     private static Plugin plugin;
 
     private static File configDir;
 
     private static Gson gameSerializer;
     private static Gson gameDeserializer;
+
+    class StartGameRunnable implements Runnable {
+        int timeUntilStart = 0;
+        String gameKey = "";
+
+        public StartGameRunnable(@NonNull String gameKey, int timeUntilStart) {
+            this.gameKey = gameKey;
+            this.timeUntilStart = timeUntilStart;
+        }
+
+        @Override
+        public void run() {
+            if(timeUntilStart <= 0){
+                activeGames.add(gameKey);
+                plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting", Objects.requireNonNull(GetGame(gameKey)).gameName));
+            } else {
+                float timeTilStartMins = timeUntilStart / 60.0f;
+                // This looks ugly, I'd love to make it nicer
+                if((((int)timeTilStartMins) % 5 == 0 && (int)(timeTilStartMins)==timeTilStartMins) || timeTilStartMins <= 1) {
+                    plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting_soon", Objects.requireNonNull(GetGame(gameKey)).gameName, "" + timeUntilStart));
+                }
+                ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+                executor.schedule(new StartGameRunnable(gameKey, timeUntilStart - 30), Math.min(30, timeUntilStart % 30), TimeUnit.SECONDS);
+            }
+        }
+    }
 
     public static void Init(Plugin p) {
         games = new HashMap<>();
@@ -161,5 +192,17 @@ public class GameManager {
         }
 
         return PlayerLeaveGameError.Okay;
+    }
+
+    public static void StartGame(@NonNull String gameKey, int timeUntilStart) {
+        if(GetGame(gameKey) == null) return;
+        HandleStartingGame(gameKey, timeUntilStart);
+    }
+
+    private static void HandleStartingGame(@NonNull String gamekey, int timeUntilStart) {
+        StartGameRunnable startGameRunnable = () -> {
+          gamekey = gamekey;
+        };
+
     }
 }

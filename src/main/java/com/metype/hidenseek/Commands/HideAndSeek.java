@@ -33,6 +33,9 @@ public class HideAndSeek implements CommandExecutor {
         if(args[0].equalsIgnoreCase("join_game") || args[0].equalsIgnoreCase("join")) {
             return (new JoinGameCommand()).onCommand(sender, command, label, Arrays.copyOfRange(args, 1, args.length));
         }
+        if(args[0].equalsIgnoreCase("leave_game") || args[0].equalsIgnoreCase("leave")) {
+            return (new LeaveGameCommand()).onCommand(sender, command, label, Arrays.copyOfRange(args, 1, args.length));
+        }
         if(args[0].equalsIgnoreCase("set_bounds")) {
             return (new SetBoundsCommand()).onCommand(sender, command, label, Arrays.copyOfRange(args, 1, args.length));
         }

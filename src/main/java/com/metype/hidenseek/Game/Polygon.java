@@ -16,6 +16,12 @@ public class Polygon {
         public String toString() {
             return "(" + x + ", " + y + ")";
         }
+
+        @Override
+        public boolean equals(Object obj) {
+            if(!(obj instanceof Point point)) return false;
+            return this.x == point.x && this.y == point.y;
+        }
     }
 
     public static class Line {
@@ -106,35 +112,62 @@ public class Polygon {
     public boolean checkInside(Point p)
     {
 
-        // When polygon has less than 3 edges, it is not
-        // polygon
+        int hits = 0;
 
-        if (points.size() < 3)
-            return false;
+        double lastPosX = points.get(points.size()-1).x;
+        double lastPosY = points.get(points.size()-1).y;
+        double curPosX, curPosY;
 
-        // Create a point at infinity, y is same as point p
-        Point pt = new Point(9999, p.y);
-        Line exline = new Line(p, pt);
-        int count = 0;
-        int i = 0;
-        do {
+        for (int i = 0; i < points.size(); lastPosX = curPosX, lastPosY = curPosY, i++) {
+            curPosX = points.get(i).x;
+            curPosY = points.get(i).y;
 
-            // Forming a line from two consecutive points of
-            // poly
-            Line side
-                    = new Line(points.get(i), points.get((i + 1) % points.size()));
-            if (isIntersect(side, exline)) {
-
-                // If side is intersects exline
-                if (direction(side.p1, p, side.p2) == 0)
-                    return onLine(side, p);
-                count++;
+            if (curPosY == lastPosY) {
+                continue;
             }
-            i = (i + 1) % points.size();
-        } while (i != 0);
 
-        // When count is odd
-        return count % 2 == 1;
+            double leftPosX;
+            if (curPosX < lastPosX) {
+                if (p.x >= lastPosX) {
+                    continue;
+                }
+                leftPosX = curPosX;
+            } else {
+                if (p.x >= curPosX) {
+                    continue;
+                }
+                leftPosX = lastPosX;
+            }
+
+            double testA, testB;
+            if (curPosY < lastPosY) {
+                if (p.y < curPosY || p.y >= lastPosY) {
+                    continue;
+                }
+                if (p.x < leftPosX) {
+                    hits++;
+                    continue;
+                }
+                testA = p.x - curPosX;
+                testB = p.y - curPosY;
+            } else {
+                if (p.y < lastPosY || p.y >= curPosY) {
+                    continue;
+                }
+                if (p.x < leftPosX) {
+                    hits++;
+                    continue;
+                }
+                testA = p.x - lastPosX;
+                testB = p.y - lastPosY;
+            }
+
+            if (testA < (testB / (lastPosY - curPosY) * (lastPosX - curPosX))) {
+                hits++;
+            }
+        }
+
+        return ((hits & 1) != 0);
     }
 
     public void addPoint(Point p) {

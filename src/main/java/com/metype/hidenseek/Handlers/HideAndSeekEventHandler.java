@@ -13,20 +13,29 @@ import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.Particle;
+import org.bukkit.block.Block;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityPotionEffectEvent;
+import org.bukkit.event.entity.EntityToggleGlideEvent;
+import org.bukkit.event.entity.ProjectileLaunchEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
+import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
+import org.bukkit.util.BlockIterator;
 import org.bukkit.util.Vector;
 
 import java.util.Objects;
@@ -59,6 +68,8 @@ public class HideAndSeekEventHandler implements Listener {
         if(seekersTeam == null) {
             seekersTeam = mainScoreboard.registerNewTeam("seekers");
         }
+        hidersTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
+        hidersTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.FOR_OTHER_TEAMS);
     }
 
     @EventHandler
@@ -83,9 +94,24 @@ public class HideAndSeekEventHandler implements Listener {
         GameManager.StartGame(e.getGameKey(), game.props.autoNewGameStartTime);
     }
 
+    private void DrawPolygon(Player p, Polygon poly) {
+        for (int i = 0; i < poly.points.size(); i++) {
+            double x = poly.points.get(i).x;
+            double z = poly.points.get(i).y;
+            double x2 = poly.points.get((i+1)%poly.points.size()).x;
+            double z2 = poly.points.get((i+1)%poly.points.size()).y;
+            double deltaX = x2 - x; // get the x-difference between the points.
+            double deltaZ = z2 - z; // get the z-difference between the points.
+            double distance = Math.sqrt((x2 - x) * (x2 - x) + (z2 - z) * (z2 - z));
+            for (double d = 0; d < 1; d += 0.5/distance) {
+                p.spawnParticle(Particle.FLAME, new Location(p.getWorld(), x + deltaX * d, p.getLocation().getBlockY(), z + deltaZ * d), 0);
+            }
+        }
+    }
+
     private void AssignTeams(Game game) {
         Random rng = new Random();
-        for(int i=0; i<Math.min(game.props.startingSeekers, game.players.size()-2); i++){
+        for(int i=0; i<Math.min(game.props.startingSeekers, game.players.size()-1); i++){
             Player player = plugin.getServer().getPlayer(game.players.get(rng.nextInt(game.players.size())));
             if(player == null) continue;
 
@@ -122,9 +148,10 @@ public class HideAndSeekEventHandler implements Listener {
             return;
         }
 
+        e.setCancelled(true);
+
         if (e.getEntity() instanceof Player whoWasHit && e.getDamager() instanceof Player whoHit) {
-            plugin.getLogger().log(Level.INFO, whoWasHit.getDisplayName() + " was hit by " + whoHit.getDisplayName());
-            if (hidersTeam.hasEntry(whoWasHit.getName()) && seekersTeam.hasEntry(whoHit.getName())) {
+            if (victimGame.hiders.contains(whoWasHit.getUniqueId()) && victimGame.seekers.contains(whoHit.getUniqueId())) {
                 whoWasHit.playSound(whoWasHit.getLocation(), "minecraft:entity.arrow.hit_player", 1, 1);
                 hidersTeam.removeEntry(whoWasHit.getName());
                 seekersTeam.addEntry(whoWasHit.getName());
@@ -140,7 +167,47 @@ public class HideAndSeekEventHandler implements Listener {
     }
 
     @EventHandler
-    public void onEffectEnd(EntityPotionEffectEvent e) {
+    public void OnProjectileLaunch(ProjectileLaunchEvent e) {
+        if(e.getEntity().getShooter() instanceof Player shooter) {
+            if(e.getEntity() instanceof EnderPearl pearl) {
+                Game game = GameManager.GetGame(shooter.getUniqueId());
+                if(game == null) return;
+                if(!game.props.allowEnderPearls) {
+                    e.setCancelled(true);
+                    shooter.sendMessage(MessageManager.GetMessageByKey("info.game.ender_pearls_disabled", game.gameName));
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void OnPlayerEat(PlayerItemConsumeEvent e) {
+        if(e.getItem().getType() == Material.CHORUS_FRUIT) {
+            Game game = GameManager.GetGame(e.getPlayer().getUniqueId());
+            if(game == null) return;
+            if(!game.props.allowChorusFruit) {
+                e.setCancelled(true);
+                e.getPlayer().sendMessage(MessageManager.GetMessageByKey("info.game.chorus_fruit_disabled", game.gameName));
+            }
+        }
+    }
+
+    @EventHandler
+    public void OnEntityToggleGlide(EntityToggleGlideEvent e) {
+        if(e.getEntity() instanceof Player shooter) {
+            if(e.isGliding()) {
+                Game game = GameManager.GetGame(shooter.getUniqueId());
+                if(game == null) return;
+                if(!game.props.allowElytra) {
+                    e.setCancelled(true);
+                    shooter.sendMessage(MessageManager.GetMessageByKey("info.game.elytra_disabled", game.gameName));
+                }
+            }
+        }
+    }
+
+    @EventHandler
+    public void OnEffectEnd(EntityPotionEffectEvent e) {
         if(!(e.getEntity() instanceof Player)) return;
         if(!GameManager.IsPlayerInAnyGame(e.getEntity().getUniqueId())) return;
 
@@ -161,10 +228,24 @@ public class HideAndSeekEventHandler implements Listener {
 
     @EventHandler
     public void OnPlayerInteract(PlayerInteractEvent e) {
-        if(e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+        BoundsEditingPlayer player = PluginStorage.GetBoundsEditingPlayer(e.getPlayer().getUniqueId());
+        if(player != null) {
+            Game game = GameManager.GetGame(player.gameKey);
+            if(game == null) {
+                PluginStorage.PlayerStopEditingGameBounds(player.id);
+                return;
+            }
+            int heldItemSlot = e.getPlayer().getInventory().getHeldItemSlot();
+
+            ItemStack heldItem = e.getPlayer().getInventory().getItem(heldItemSlot);
+
+            if(heldItem == null) return;
+
+            if(heldItem.getType() == Material.GOLDEN_HOE) {
+                e.setCancelled(true);
+                if(e.getAction() == Action.RIGHT_CLICK_BLOCK) {
             
-                    Vector blockPos = e.getClickedPosition();
-                    assert blockPos != null;
+                    Location blockPos = Objects.requireNonNull(e.getClickedBlock()).getLocation();
 
                     Polygon.Point additionalPoint = new Polygon.Point(blockPos.getBlockX(), blockPos.getBlockZ());
 
@@ -174,6 +255,18 @@ public class HideAndSeekEventHandler implements Listener {
 
                     game.gameBounds.addPoint(additionalPoint);
                     e.getPlayer().sendMessage(MessageManager.GetMessageByKey("info.bounds.add_point", additionalPoint.toString()));
+                    if(game.gameBounds.points.size() < 3) return;
+
+                    DrawPolygon(e.getPlayer(), game.gameBounds);
+                }
+                if(e.getAction() == Action.LEFT_CLICK_BLOCK) {
+                    Location blockPos = Objects.requireNonNull(e.getClickedBlock()).getLocation();
+                    Polygon.Point additionalPoint = new Polygon.Point(blockPos.getBlockX(), blockPos.getBlockZ());
+
+                    if(game.gameBounds.points.contains(additionalPoint)) {
+                        game.gameBounds.points.remove(additionalPoint);
+                        e.getPlayer().sendMessage(MessageManager.GetMessageByKey("info.bounds.remove_point", additionalPoint.toString()));
+                    }
                 }
             }
         }
@@ -187,6 +280,18 @@ public class HideAndSeekEventHandler implements Listener {
 
     @EventHandler
     public void OnPlayerMove(PlayerMoveEvent e) {
+        if(PluginStorage.PlayerIsEditingGameBounds(e.getPlayer().getUniqueId())) {
+            BoundsEditingPlayer player = PluginStorage.GetBoundsEditingPlayer(e.getPlayer().getUniqueId());
+            assert player != null;
+            Game game = GameManager.GetGame(player.gameKey);
+            if(game == null) {
+                PluginStorage.PlayerStopEditingGameBounds(player.id);
+                return;
+            }
+            if(game.gameBounds.points.size() < 3) return;
+
+            DrawPolygon(e.getPlayer(), game.gameBounds);
+        }
         if(!GameManager.IsPlayerInAnyGame(e.getPlayer().getUniqueId())) return;
         Game game = GameManager.GetGame(e.getPlayer().getUniqueId());
 

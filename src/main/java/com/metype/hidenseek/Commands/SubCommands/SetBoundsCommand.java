@@ -15,6 +15,8 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import java.util.Objects;
+
 public class SetBoundsCommand implements CommandExecutor {
 
     @Override
@@ -42,24 +44,31 @@ public class SetBoundsCommand implements CommandExecutor {
             }
 
             boolean hasFreeSlot = false;
+            boolean doNotGiveHoe = false;
 
             for(ItemStack item : player.getInventory().getContents()){
                 if(item == null) {
                     hasFreeSlot = true;
-                    break;
+                    continue;
                 }
                 if(item.getType() == Material.AIR){
                     hasFreeSlot= true;
-                    break;
+                }
+                if(item.getType() == Material.GOLDEN_HOE) {
+                    if(item.hasItemMeta()) {
+                        if(Objects.requireNonNull(item.getItemMeta()).getDisplayName().equalsIgnoreCase("§6Bounds Edit Tool")) {
+                            doNotGiveHoe = true;
+                            break;
+                        }
+                    }
                 }
             }
 
-            if(!hasFreeSlot) {
+            if(!hasFreeSlot && !doNotGiveHoe) {
                 sender.sendMessage(MessageManager.GetMessageByKey("error.inventory.no_free_slot"));
                 return false;
             }
 
-            editedGame.gameBounds = new Polygon(0);
             PluginStorage.PlayerStartEditingGameBounds(args[0], player.getUniqueId());
 
             ItemStack editTool = new ItemStack(Material.GOLDEN_HOE);
@@ -70,7 +79,10 @@ public class SetBoundsCommand implements CommandExecutor {
             }
             editToolMeta.setDisplayName("§6Bounds Edit Tool");
             editTool.setItemMeta(editToolMeta);
-            player.getInventory().addItem(editTool);
+
+            if(!doNotGiveHoe) {
+                player.getInventory().addItem(editTool);
+            }
 
             sender.sendMessage(MessageManager.GetMessageByKey("success.command.edit_bounds", args[0]));
         } else {

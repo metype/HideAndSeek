@@ -82,6 +82,12 @@ public class GameManager {
         public void run() {
             if(this.timeUntilGameEnd <= 0) {
                 // Handle game end logic
+                EndGame(this.gameKey);
+                Game game = GetGame(this.gameKey);
+                if(game == null) return;
+                if(game.props.autoNewGame) {
+                    StartGame(this.gameKey, game.props.autoNewGameStartTime);
+                }
             } else {
                 float timeTilEndMins = timeUntilGameEnd / 60.0f;
 
@@ -322,6 +328,22 @@ public class GameManager {
                 HandlePlayerLeaveGame(gameKey, player);
             }
             plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_cancelled", game.gameName));
+        }
+    }
+
+    public static void EndGame(@NonNull String gameKey) {
+        if(startingGames.contains(gameKey) || activeGames.contains(gameKey)) {
+            startingGames.remove(gameKey);
+            activeGames.remove(gameKey);
+
+            Game game = GetGame(gameKey);
+            if(game == null) return;
+            for(UUID id : game.players) {
+                Player player = plugin.getServer().getPlayer(id);
+                if(player == null) continue;
+                HandlePlayerLeaveGame(gameKey, player);
+            }
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_ending", game.gameName));
         }
     }
 

@@ -63,9 +63,12 @@ public class HideAndSeekTabComplete implements TabCompleter {
         CommandTree joinGameCommand = new CommandTree(() -> List.of(new String[]{"join", "join_game"}));
         joinGameCommand.SetArgsFunction(GameManager::GetJoinableGames);
 
+        CommandTree leaveGameCommand = new CommandTree(() -> List.of(new String[]{"leave", "leave_game"}));
+
         hideAndSeekCommandTree.AddSubCommands(gameCommand,
                 helpCommand,
                 joinGameCommand,
+                leaveGameCommand,
                 reloadCommand,
                 resetConfigCommand,
                 saveCommand,

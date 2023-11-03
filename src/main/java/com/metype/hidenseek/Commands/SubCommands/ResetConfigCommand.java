@@ -23,6 +23,7 @@ public class ResetConfigCommand implements CommandExecutor {
             if(args[0].equalsIgnoreCase("messages")) {
                 MessageManager.ResetMessageConfig();
                 sender.sendMessage(MessageManager.GetMessageByKey("success.command.reset.messages"));
+                MessageManager.ReloadMessagesConfig();
             }
         } else {
             sender.sendMessage(MessageManager.GetMessageByKey("error.no_permission"));

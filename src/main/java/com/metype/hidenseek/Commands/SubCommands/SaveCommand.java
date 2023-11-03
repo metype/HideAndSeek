@@ -10,7 +10,6 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class SaveCommand implements CommandExecutor {
 
-    // This method is called, when somebody uses our command
     @Override
     public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, @NonNull String[] args) {
         boolean hasPermission = (sender instanceof ConsoleCommandSender);

@@ -1,4 +1,4 @@
-package com.metype.hidenseek;
+package com.metype.hidenseek.Game;
 import com.google.gson.*;
 
 import java.lang.reflect.Type;
@@ -27,32 +27,32 @@ public class Polygon {
         }
     }
 
-    public Point[] points;
+    public ArrayList<Point> points;
 
     public Polygon() {
-        points = new Point[3];
+        points = new ArrayList<>();
         for(int i=0; i<3; i++){
-            points[i] = new Point(0,0);
+            points.add(new Point(0,0));
         }
     }
 
     public Polygon(int size) {
-        points = new Point[size];
+        points = new ArrayList<>();
         for(int i=0; i<size; i++){
-            points[i] = new Point(0,0);
+            points.add(new Point(0,0));
         }
     }
 
-    private int onLine(Line l1, Point p)
+    private boolean onLine(Line l1, Point p)
     {
         // Check whether p is on the line or not
         if (p.x <= Math.max(l1.p1.x, l1.p2.x)
                 && p.x >= Math.min(l1.p1.x, l1.p2.x)
                 && (p.y <= Math.max(l1.p1.y, l1.p2.y)
                 && p.y >= Math.min(l1.p1.y, l1.p2.y)))
-            return 1;
+            return true;
 
-        return 0;
+        return false;
     }
 
     private int direction(Point a, Point b, Point c)
@@ -74,7 +74,7 @@ public class Polygon {
         return 1;
     }
 
-    private int isIntersect(Line l1, Line l2)
+    private boolean isIntersect(Line l1, Line l2)
     {
         // Four direction for two lines and points of other
         // line
@@ -85,35 +85,32 @@ public class Polygon {
 
         // When intersecting
         if (dir1 != dir2 && dir3 != dir4)
-            return 1;
+            return true;
 
         // When p2 of line2 are on the line1
-        if (dir1 == 0 && onLine(l1, l2.p1) == 1)
-            return 1;
+        if (dir1 == 0 && onLine(l1, l2.p1))
+            return true;
 
         // When p1 of line2 are on the line1
-        if (dir2 == 0 && onLine(l1, l2.p2) == 1)
-            return 1;
+        if (dir2 == 0 && onLine(l1, l2.p2))
+            return true;
 
         // When p2 of line1 are on the line2
-        if (dir3 == 0 && onLine(l2, l1.p1) == 1)
-            return 1;
+        if (dir3 == 0 && onLine(l2, l1.p1))
+            return true;
 
         // When p1 of line1 are on the line2
-        if (dir4 == 0 && onLine(l2, l1.p2) == 1)
-            return 1;
-
-        return 0;
+        return dir4 == 0 && onLine(l2, l1.p2);
     }
 
-    public int checkInside(Point p)
+    public boolean checkInside(Point p)
     {
 
-        // When polygon has less than 3 edge, it is not
+        // When polygon has less than 3 edges, it is not
         // polygon
 
-        if (points.length < 3)
-            return 0;
+        if (points.size() < 3)
+            return false;
 
         // Create a point at infinity, y is same as point p
         Point pt = new Point(9999, p.y);
@@ -125,19 +122,32 @@ public class Polygon {
             // Forming a line from two consecutive points of
             // poly
             Line side
-                    = new Line(points[i], points[(i + 1) % points.length]);
-            if (isIntersect(side, exline) == 1) {
+                    = new Line(points.get(i), points.get((i + 1) % points.size()));
+            if (isIntersect(side, exline)) {
 
                 // If side is intersects exline
                 if (direction(side.p1, p, side.p2) == 0)
                     return onLine(side, p);
                 count++;
             }
-            i = (i + 1) % points.length;
+            i = (i + 1) % points.size();
         } while (i != 0);
 
         // When count is odd
-        return count & 1;
+        return count % 2 == 1;
+    }
+
+    public void addPoint(Point p) {
+        int indexOfClosestPoint = 0;
+        for(int i = 0; i < points.size(); i++){
+            float distSqr = (p.x - points.get(i).x) * (p.x - points.get(i).x) + (p.y - points.get(i).y) * (p.y - points.get(i).y);
+            float distSqrComp = (p.x - points.get(indexOfClosestPoint).x) * (p.x - points.get(indexOfClosestPoint).x) + (p.y - points.get(indexOfClosestPoint).y) * (p.y - points.get(indexOfClosestPoint).y);
+            if(distSqr < distSqrComp) {
+                indexOfClosestPoint = i;
+            }
+        }
+
+        points.add(indexOfClosestPoint, p);
     }
 }
 

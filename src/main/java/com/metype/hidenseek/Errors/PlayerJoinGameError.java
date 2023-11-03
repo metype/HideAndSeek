@@ -4,4 +4,5 @@ public enum PlayerJoinGameError {
     Okay,
     GameDoesNotExist,
     PlayerAlreadyInGame,
+    GameInactive,
 }

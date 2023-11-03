@@ -1,8 +1,9 @@
 package com.metype.hidenseek.Deserializers;
 
 import com.google.gson.*;
-import com.metype.hidenseek.Game;
-import com.metype.hidenseek.Polygon;
+import com.metype.hidenseek.Game.Game;
+import com.metype.hidenseek.Game.GameProperties;
+import com.metype.hidenseek.Game.Polygon;
 
 import java.lang.reflect.Type;
 
@@ -12,14 +13,6 @@ public class GameDeserializer implements JsonDeserializer<Game> {
         Game gameObj = new Game();
 
         JsonObject gameObject = jsonElement.getAsJsonObject();
-
-        JsonElement minHeightBounds = gameObject.get("minHeightBounds");
-        if(minHeightBounds == null) gameObj.minHeightBounds = 0;
-        else gameObj.minHeightBounds = minHeightBounds.getAsInt();
-
-        JsonElement maxHeightBounds = gameObject.get("maxHeightBounds");
-        if(maxHeightBounds == null) gameObj.maxHeightBounds = 0;
-        else gameObj.maxHeightBounds = maxHeightBounds.getAsInt();
 
         JsonElement gameName = gameObject.get("gameName");
         if(gameName == null) throw new JsonParseException("No game name!");
@@ -41,11 +34,15 @@ public class GameDeserializer implements JsonDeserializer<Game> {
                 JsonElement yPos = pointsArr.get(i).getAsJsonObject().get("y");
                 if(yPos != null) point.y = yPos.getAsInt();
 
-                gameBounds.points[i] = point;
+                gameBounds.points.set(i, point);
             }
         }
 
         gameObj.gameBounds = gameBounds;
+
+        JsonElement gameProps = gameObject.get("props");
+        if(gameProps == null) gameObj.props = new GameProperties();
+        else gameObj.props = (new Gson()).fromJson(gameProps, GameProperties.class);
 
         return gameObj;
     }

@@ -26,10 +26,16 @@ public class CommandTree {
     }
 
     public void SetArgsFunction(ArgsFunction argsFunction) {
+        if(this.args != null) {
+            System.out.println("Possible Error! Args function for " + String.join(",", commandNameLambda.get()) + " has been set multiple times!");
+        }
         this.args = argsFunction;
     }
 
     public void SetArgs(String... args) {
+        if(this.args != null) {
+            System.out.println("Possible Error! Args function for " + String.join(",", commandNameLambda.get()) + " has been set multiple times!");
+        }
         this.args = () -> Arrays.stream(args).toList();;
     }
 }

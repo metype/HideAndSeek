@@ -1,5 +1,6 @@
 package com.metype.hidenseek.Handlers;
 
+import com.metype.hidenseek.Game.Game;
 import com.metype.hidenseek.Utilities.CommandTree;
 import com.metype.hidenseek.Utilities.GameManager;
 import org.bukkit.command.Command;
@@ -32,9 +33,12 @@ public class HideAndSeekTabComplete implements TabCompleter {
 
         CommandTree gameEditCommand = new CommandTree("edit");
         CommandTree gameEditNameCommand = new CommandTree(GameManager::GetGames);
-        gameEditNameCommand.SetArgs("gameLength", "seekerSpeedStrength", "invisibleSeekers");
+        gameEditNameCommand.SetArgsFunction(Game::GetPropertyNames);
         gameEditCommand.AddSubCommands(gameEditNameCommand);
         gameCommand.AddSubCommands(gameEditCommand);
+
+        CommandTree setBoundsCommand = new CommandTree("set_bounds");
+        setBoundsCommand.SetArgsFunction(GameManager::GetGames);
 
         CommandTree saveCommand = new CommandTree("save");
 
@@ -56,7 +60,17 @@ public class HideAndSeekTabComplete implements TabCompleter {
         CommandTree resetConfigCommand = new CommandTree("reset_config");
         resetConfigCommand.SetArgs("messages");
 
-        hideAndSeekCommandTree.AddSubCommands(gameCommand, saveCommand, helpCommand, reloadCommand, resetConfigCommand);
+        CommandTree joinGameCommand = new CommandTree(() -> List.of(new String[]{"join", "join_game"}));
+        joinGameCommand.SetArgsFunction(GameManager::GetJoinableGames);
+
+        hideAndSeekCommandTree.AddSubCommands(gameCommand,
+                helpCommand,
+                joinGameCommand,
+                reloadCommand,
+                resetConfigCommand,
+                saveCommand,
+                setBoundsCommand
+        );
     }
 
 

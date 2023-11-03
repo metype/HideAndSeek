@@ -1,4 +1,4 @@
-package com.metype.hidenseek;
+package com.metype.hidenseek.Game;
 
 import java.lang.reflect.Field;
 import java.util.ArrayList;
@@ -11,11 +11,14 @@ public class Game {
 
     public ArrayList<UUID> players = new ArrayList<>();
 
-    public boolean isActive, invisibleSeekers;
+    public ArrayList<UUID> seekers = new ArrayList<>();
+    public ArrayList<UUID> hiders = new ArrayList<>();
 
-    public int minHeightBounds, maxHeightBounds, timeUntilStart;
+    public ArrayList<OutOfBoundsPlayer> oobPlayers = new ArrayList<>();
 
-    public GameProperties props;
+    public boolean isActive;
+
+    public GameProperties props = new GameProperties();
 
     public String toString() {
         StringBuilder playerList = new StringBuilder("[");
@@ -31,39 +34,53 @@ public class Game {
         if(players.isEmpty()) playerList.append("]");
 
         StringBuilder boundsStr = new StringBuilder("[");
-        for(int i=0; i<gameBounds.points.length; i++) {
-            boundsStr.append(gameBounds.points[i].toString());
-            if(i < gameBounds.points.length - 1) {
+        for(int i=0; i<gameBounds.points.size(); i++) {
+            boundsStr.append(gameBounds.points.get(i).toString());
+            if(i < gameBounds.points.size() - 1) {
                 boundsStr.append(", ");
             } else {
                 boundsStr.append("]");
             }
         }
-        if(gameBounds.points.length == 0) boundsStr.append("]");
+        if(gameBounds.points.size() == 0) boundsStr.append("]");
 
         return "Game{name=\"" + gameName + "\""
                 + ", players=" + playerList
                 + ", isActive=" + isActive
-                + ", minHeight=" + minHeightBounds
-                + ", maxHeight=" + maxHeightBounds
                 + ", gameBounds=" + boundsStr + "}";
     }
 
-    public Object SetProperty(String propName, String propValue) throws NoSuchFieldException, IllegalAccessException {
+    public Object SetProperty(String propName, String propValue) throws NoSuchFieldException, IllegalAccessException, NumberFormatException {
         Field propField = props.getClass()
                 .getDeclaredField(propName);
-        if(propField.getType() == Integer.class) {
+        if(propField.getType() == int.class) {
             propField.set(props, Integer.parseInt(propValue));
             return Integer.parseInt(propValue);
         }
-        if(propField.getType() == Float.class) {
+        if(propField.getType() == float.class) {
             propField.set(props, Float.parseFloat(propValue));
             return Float.parseFloat(propValue);
         }
-        if(propField.getType() == Boolean.class) {
+        if(propField.getType() == boolean.class) {
             propField.set(props, Boolean.parseBoolean(propValue));
             return Boolean.parseBoolean(propValue);
         }
         return null;
+    }
+
+    public Object GetProperty(String propName) throws NoSuchFieldException, IllegalAccessException {
+        Field propField = props.getClass()
+                .getDeclaredField(propName);
+        return propField.get(props);
+    }
+
+    public static ArrayList<String> GetPropertyNames() {
+        Field[] propFields = GameProperties.class
+                .getFields();
+        ArrayList<String> fieldNames = new ArrayList<>();
+        for(Field field : propFields) {
+            fieldNames.add(field.getName());
+        }
+        return fieldNames;
     }
 }

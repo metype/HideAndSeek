@@ -16,18 +16,21 @@ public class MessageManager {
     private static Map<String, String> messages = new HashMap<>();
     private static Plugin plugin;
 
+    private static File messagesFile;
+
     public static void Init(Plugin p) {
         if(p != null)
             plugin = p;
         assert plugin != null;
-        File messagesFile = new File(plugin.getDataFolder(), "messages.json");
+        messagesFile = new File(plugin.getDataFolder(), "messages.json");
         if(!messagesFile.exists()) {
             ResetMessageConfig();
         }
+        ReloadMessagesConfig();
     }
 
     public static void ResetMessageConfig() {
-        File messagesFile = new File(plugin.getDataFolder(), "messages.json");
+        messagesFile = new File(plugin.getDataFolder(), "messages.json");
         try {
             if(!messagesFile.createNewFile()) {
                 try (FileChannel outChan = new FileOutputStream(messagesFile, true).getChannel()) {
@@ -44,7 +47,9 @@ public class MessageManager {
         } catch (IOException e) {
             plugin.getLogger().log(Level.SEVERE, "Could not create messages.json and one was not found!");
         }
+    }
 
+    public static void ReloadMessagesConfig() {
         Gson file = new Gson();
         StringBuilder fileContents = new StringBuilder();
         try {

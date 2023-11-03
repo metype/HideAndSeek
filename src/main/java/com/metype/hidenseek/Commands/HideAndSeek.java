@@ -30,6 +30,12 @@ public class HideAndSeek implements CommandExecutor {
         if(args[0].equalsIgnoreCase("reset_config")) {
             return (new ResetConfigCommand()).onCommand(sender, command, label, Arrays.copyOfRange(args, 1, args.length));
         }
+        if(args[0].equalsIgnoreCase("join_game") || args[0].equalsIgnoreCase("join")) {
+            return (new JoinGameCommand()).onCommand(sender, command, label, Arrays.copyOfRange(args, 1, args.length));
+        }
+        if(args[0].equalsIgnoreCase("set_bounds")) {
+            return (new SetBoundsCommand()).onCommand(sender, command, label, Arrays.copyOfRange(args, 1, args.length));
+        }
         sender.sendMessage(MessageManager.GetMessageByKey("error.invalid_subcommand", args[0]));
         return true;
     }

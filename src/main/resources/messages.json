@@ -4,7 +4,7 @@
   "broadcast.game_start_no_length": "&8[&6Hide And Seek&8] &aGame will end when the last person is tagged!",
   "broadcast.game_hide_time": "&8[&6Hide And Seek&8] &aHiders have &e%1$s&a to hide!",
   "broadcast.game_ending_soon": "&8[&6Hide And Seek&8] &aGame will end in &e%2$s",
-  "broadcast.game_ending": "&8[&6Hide And Seek&8] &aGame has ended&e now!",
+  "broadcast.game_ending": "&8[&6Hide And Seek&8] &aGame has ended!",
   "broadcast.game_cancelled": "&8[&6Hide And Seek&8] &aThe Hide-and-Seek game &e\"%1$s\"&a has been &ccancelled&a!",
   "broadcast.game_cancelled_not_enough_players": "&8[&6Hide And Seek&8] &aThe Hide-and-Seek game &e\"%1$s\"&a didn't have enough players to start!",
   "broadcast.game_win": "&8[&6Hide And Seek&8] &aThe Hide-and-Seek game &e\"%1$s\"&a has been won by &e%2$s&a!",

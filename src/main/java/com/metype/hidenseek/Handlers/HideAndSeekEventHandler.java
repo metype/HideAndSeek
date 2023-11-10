@@ -77,7 +77,7 @@ public class HideAndSeekEventHandler implements Listener {
     }
 
     @EventHandler
-    public void onGameStart(GameStartEvent e) {
+    public void OnGameStart(GameStartEvent e) {
         Game game = GameManager.GetGame(e.getGameKey());
         if(game == null) return;
         if(game.players.size() < 2) {
@@ -87,6 +87,7 @@ public class HideAndSeekEventHandler implements Listener {
         }
         plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting", Objects.requireNonNull(GameManager.GetGame(e.getGameKey())).gameName));
         AssignTeams(game);
+        game.oobPlayers.clear();
     }
 
     @EventHandler
@@ -106,7 +107,7 @@ public class HideAndSeekEventHandler implements Listener {
         if(e.getReason() == PlayerLeaveGameReason.GAME_END) return;
         Game game = GameManager.GetGame(e.getGameKey());
         if(game == null) return;
-        if(game.hiders.size() == 0 || game.players.size() == game.hiders.size()) {
+        if(game.hiders.isEmpty() || game.players.size() == game.hiders.size()) {
             LetGameEnd(e.getGameKey());
         }
     }
@@ -139,10 +140,6 @@ public class HideAndSeekEventHandler implements Listener {
             game.seekers.add(player.getUniqueId());
             seekersTeam.addEntry(player.getName());
             player.sendTitle(MessageManager.GetMessageByKey("info.joined_seekers"), "", 10, 40, 10);
-
-//            player.addPotionEffect(blindness);
-//            player.addPotionEffect(slowness);
-//            player.addPotionEffect(speedEffect);
         }
         for(UUID id : game.players) {
             Player player = plugin.getServer().getPlayer(id);
@@ -217,7 +214,15 @@ public class HideAndSeekEventHandler implements Listener {
 
                 game.hiders.remove(whoWasHit.getUniqueId());
                 game.seekers.add(whoWasHit.getUniqueId());
-                whoWasHit.sendTitle(MessageManager.GetMessageByKey("info.joined_seekers"), "", 10, 40, 10);
+
+                for(UUID pl : game.hiders) {
+                    Player p = Bukkit.getPlayer(pl);
+                    if(p == null) continue;
+                    p.sendMessage(MessageManager.GetMessageByKey("info.player_hit", whoWasHit.getName(), String.valueOf(game.hiders.size())));
+                }
+
+                whoWasHit.sendMessage(MessageManager.GetMessageByKey("info.joined_seekers_chat"));
+                whoWasHit.sendTitle(MessageManager.GetMessageByKey("info.joined_seekers_title"), "", 10, 40, 10);
                 if(game.props.seekerSpeedStrength > 0) {
                     PotionEffect speedEffect = new PotionEffect(PotionEffectType.SPEED, 20, game.props.seekerSpeedStrength, true, true);
                     whoWasHit.addPotionEffect(speedEffect);
@@ -346,7 +351,7 @@ public class HideAndSeekEventHandler implements Listener {
     }
 
     @EventHandler
-    public void onSignChange(SignChangeEvent e) {
+    public void OnSignChange(SignChangeEvent e) {
         Game game = GameManager.GetGame(e.getPlayer().getUniqueId());
         if (game == null) return;
         e.setCancelled(true);

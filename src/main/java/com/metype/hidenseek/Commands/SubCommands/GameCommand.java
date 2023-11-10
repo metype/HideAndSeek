@@ -6,6 +6,7 @@ import com.metype.hidenseek.Utilities.MessageManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.bukkit.entity.Player;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.ArrayList;
@@ -32,6 +33,7 @@ public class GameCommand implements CommandExecutor {
         if(args[0].equalsIgnoreCase("start")) {
             if(!sender.hasPermission("hns.game.start")) {
                 sender.sendMessage(MessageManager.GetMessageByKey("error.no_permission"));
+                return false;
             }
             if(args.length < 3) {
                 sender.sendMessage(MessageManager.GetMessageByKey("error.not_enough_args"));
@@ -39,6 +41,18 @@ public class GameCommand implements CommandExecutor {
             }
 
             return StartGame(sender, args[1], args[2]);
+        }
+        if(args[0].equalsIgnoreCase("stop")) {
+            if(!sender.hasPermission("hns.game.stop")) {
+                sender.sendMessage(MessageManager.GetMessageByKey("error.no_permission"));
+                return false;
+            }
+            if(args.length < 2) {
+                sender.sendMessage(MessageManager.GetMessageByKey("error.not_enough_args"));
+                return false;
+            }
+
+            return StopGame(sender, args[1]);
         }
         if(args[0].equalsIgnoreCase("create")) {
             if(!sender.hasPermission("hns.game.create")) {
@@ -51,6 +65,18 @@ public class GameCommand implements CommandExecutor {
             }
 
             return CreateGame(sender, args[1], args[2]);
+        }
+        if(args[0].equalsIgnoreCase("set_start")) {
+            if(!sender.hasPermission("hns.game.set_start")) {
+                sender.sendMessage(MessageManager.GetMessageByKey("error.no_permission"));
+                return false;
+            }
+            if(args.length == 1) {
+                sender.sendMessage(MessageManager.GetMessageByKey("error.not_enough_args"));
+                return false;
+            }
+
+            return SetStart(sender, args[1]);
         }
         if(args[0].equalsIgnoreCase("edit")) {
             if(!sender.hasPermission("hns.game.edit")) {
@@ -103,7 +129,18 @@ public class GameCommand implements CommandExecutor {
             sender.sendMessage(MessageManager.GetMessageByKey("error.invalid_number", gameKey));
             return false;
         }
-        sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.start", gameKey, timeStr));
+        sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.start", game.gameName, timeStr));
+        return true;
+    }
+
+    private boolean StopGame(CommandSender sender, String gameKey) {
+        Game game = GameManager.GetGame(gameKey);
+        if(game == null) {
+            sender.sendMessage(MessageManager.GetMessageByKey("error.game.no_exist", gameKey));
+            return false;
+        }
+        GameManager.EndGame(gameKey);
+        sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.stop", game.gameName));
         return true;
     }
 
@@ -116,6 +153,18 @@ public class GameCommand implements CommandExecutor {
 
         GameManager.NewGame(gameKey, newGame);
         sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.create", gameKey, newGame.gameName));
+        return true;
+    }
+
+    private boolean SetStart(CommandSender sender, String gameKey) {
+        if(!(sender instanceof Player player)) return false;
+        Game game = GameManager.GetGame(gameKey);
+        if(game == null) {
+            sender.sendMessage(MessageManager.GetMessageByKey("error.game.no_exist", gameKey));
+            return false;
+        }
+        game.startGameLocation = player.getLocation();
+        sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.set_start", game.gameName));
         return true;
     }
 

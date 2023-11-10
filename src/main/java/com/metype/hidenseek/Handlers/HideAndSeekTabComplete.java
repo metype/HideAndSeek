@@ -22,8 +22,17 @@ public class HideAndSeekTabComplete implements TabCompleter {
         CommandTree gameTimeSubcommand = new CommandTree(GameManager::GetGames);
         gameTimeSubcommand.SetArgs("30s", "1m", "5m");
 
+
         gameStartCommand.AddSubCommands(gameTimeSubcommand);
         gameCommand.AddSubCommands(gameStartCommand);
+
+        CommandTree gameSetStartSubcommand = new CommandTree("set_start");
+        gameSetStartSubcommand.SetArgsFunction(GameManager::GetGames);
+        gameCommand.AddSubCommands(gameSetStartSubcommand);
+
+        CommandTree gameStopCommand = new CommandTree("stop");
+        gameStopCommand.SetArgsFunction(GameManager::GetGames);
+        gameCommand.AddSubCommands(gameStopCommand);
 
         CommandTree gameCreateCommand = new CommandTree("create");
         CommandTree gameCreateNameCommand = new CommandTree("*");

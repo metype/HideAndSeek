@@ -1,5 +1,7 @@
 package com.metype.hidenseek.Game;
 
+import org.bukkit.Location;
+
 import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.UUID;
@@ -16,9 +18,19 @@ public class Game {
 
     public ArrayList<OutOfBoundsPlayer> oobPlayers = new ArrayList<>();
 
-    public boolean isActive;
+    public boolean isActive, hasEnded = false;
 
     public GameProperties props = new GameProperties();
+
+    public Location startGameLocation = null;
+
+    @Override
+    public boolean equals(Object obj) {
+        if(!(obj instanceof Game game)) return false;
+        if(!game.gameName.equals(gameName)) return false;
+        if(!game.gameBounds.points.equals(gameBounds.points)) return false;
+        return game.props.equals(props);
+    }
 
     public String toString() {
         StringBuilder playerList = new StringBuilder("[");

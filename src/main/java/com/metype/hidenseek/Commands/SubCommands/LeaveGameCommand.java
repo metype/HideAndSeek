@@ -3,6 +3,7 @@ package com.metype.hidenseek.Commands.SubCommands;
 import com.metype.hidenseek.Errors.PlayerJoinGameError;
 import com.metype.hidenseek.Errors.PlayerLeaveGameError;
 import com.metype.hidenseek.Game.Game;
+import com.metype.hidenseek.Handlers.PlayerLeaveGameReason;
 import com.metype.hidenseek.Utilities.GameManager;
 import com.metype.hidenseek.Utilities.MessageManager;
 import org.bukkit.command.Command;
@@ -20,7 +21,7 @@ public class LeaveGameCommand implements CommandExecutor {
             return false;
         }
         Game game = GameManager.GetGame(p.getUniqueId());
-        PlayerLeaveGameError err = GameManager.RemovePlayerFromAllGames(p.getUniqueId());
+        PlayerLeaveGameError err = GameManager.RemovePlayerFromAllGames(p.getUniqueId(), PlayerLeaveGameReason.LEAVE_REQUEST);
         switch (err) {
             case PlayerNotInGame -> {
                 sender.sendMessage(MessageManager.GetMessageByKey("error.not_in_game"));

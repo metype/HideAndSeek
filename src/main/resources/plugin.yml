@@ -27,3 +27,6 @@ permissions:
   hns.game.start:
     description: Allows a user to start games.
     default: op
+  hns.game.stop:
+    description: Allows a user to stop games.
+    default: op

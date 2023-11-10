@@ -7,10 +7,13 @@ import com.metype.hidenseek.Errors.PlayerJoinGameError;
 import com.metype.hidenseek.Errors.PlayerLeaveGameError;
 import com.metype.hidenseek.Game.Game;
 import com.metype.hidenseek.Game.OutOfBoundsPlayer;
-import com.metype.hidenseek.Game.OutOfBoundsTimer;
+import com.metype.hidenseek.Handlers.GameEndEvent;
 import com.metype.hidenseek.Handlers.GameStartEvent;
+import com.metype.hidenseek.Handlers.PlayerLeaveGameEvent;
+import com.metype.hidenseek.Handlers.PlayerLeaveGameReason;
 import com.metype.hidenseek.Serializers.GameSerializer;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.Plugin;
 
@@ -25,6 +28,10 @@ import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import com.google.gson.Gson;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class GameManager {
@@ -247,6 +254,9 @@ public class GameManager {
             }
         }
 
+//        if(playerInGame)
+//            System.out.println("Player " + playerID + " is in a game!");
+
         return playerInGame;
     }
 
@@ -265,31 +275,41 @@ public class GameManager {
         if(game == null) return PlayerJoinGameError.GameDoesNotExist;
         if(IsPlayerInAnyGame(playerID)) return PlayerJoinGameError.PlayerAlreadyInGame;
         if(!startingGames.contains(gameKey) && !activeGames.contains(gameKey)) return PlayerJoinGameError.GameInactive;
+        if(!game.hasEnded && activeGames.contains(gameKey)) return PlayerJoinGameError.GameInProgress;
 
         game.players.add(playerID);
         return PlayerJoinGameError.Okay;
     }
 
     public static PlayerLeaveGameError RemovePlayerFromGame(@NonNull String gameKey, @NonNull UUID playerID) {
+        return RemovePlayerFromGame(gameKey, playerID, PlayerLeaveGameReason.UNKNOWN);
+    }
+
+    public static PlayerLeaveGameError RemovePlayerFromGame(@NonNull String gameKey, @NonNull UUID playerID, PlayerLeaveGameReason reason) {
         Game game = GetGame(gameKey);
         if(game == null) return PlayerLeaveGameError.GameDoesNotExist;
-        if(!IsPlayerInAnyGame(playerID)) return PlayerLeaveGameError.PlayerNotInGame;
+        if(!IsPlayerInGame(gameKey, playerID)) return PlayerLeaveGameError.PlayerNotInGame;
 
         game.oobPlayers.removeIf((player) -> player.id == playerID);
         game.players.remove(playerID);
         game.hiders.remove(playerID);
         game.seekers.remove(playerID);
+
+        PlayerLeaveGameEvent leaveGameEvent = new PlayerLeaveGameEvent(gameKey, Bukkit.getPlayer(playerID), reason);
+        try {
+            Bukkit.getPluginManager().callEvent(leaveGameEvent);
+        } catch(Exception e) {
+            System.out.println(e.getMessage());
+        }
+
         return PlayerLeaveGameError.Okay;
     }
 
-    public static PlayerLeaveGameError RemovePlayerFromAllGames(@NonNull UUID playerID) {
+    public static PlayerLeaveGameError RemovePlayerFromAllGames(@NonNull UUID playerID, PlayerLeaveGameReason reason) {
         if(!IsPlayerInAnyGame(playerID)) return PlayerLeaveGameError.PlayerNotInGame;
 
-        for(Game game : games.values()) {
-            game.oobPlayers.removeIf((player) -> player.id == playerID);
-            game.players.remove(playerID);
-            game.hiders.remove(playerID);
-            game.seekers.remove(playerID);
+        for(String gameKey : GetGames()) {
+            RemovePlayerFromGame(gameKey, playerID, reason);
         }
 
         return PlayerLeaveGameError.Okay;
@@ -309,6 +329,10 @@ public class GameManager {
         return PlayerLeaveGameError.Okay;
     }
 
+    public static boolean IsGameStarting(@NonNull String gameKey) {
+        return startingGames.contains(gameKey);
+    }
+
     public static void StartGame(@NonNull String gameKey, int timeUntilStart) {
         if(GetGame(gameKey) == null) return;
         startingGames.add(gameKey);
@@ -317,38 +341,73 @@ public class GameManager {
 
     public static void CancelGame(@NonNull String gameKey) {
         if(startingGames.contains(gameKey) || activeGames.contains(gameKey)) {
-            startingGames.remove(gameKey);
-            activeGames.remove(gameKey);
-
-            Game game = GetGame(gameKey);
-            if(game == null) return;
-            for(UUID id : game.players) {
-                Player player = plugin.getServer().getPlayer(id);
-                if(player == null) continue;
-                HandlePlayerLeaveGame(gameKey, player);
-            }
+            Game game = InternalEndGame(gameKey);
             plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_cancelled", game.gameName));
         }
     }
 
     public static void EndGame(@NonNull String gameKey) {
-        if(startingGames.contains(gameKey) || activeGames.contains(gameKey)) {
-            startingGames.remove(gameKey);
-            activeGames.remove(gameKey);
-
-            Game game = GetGame(gameKey);
-            if(game == null) return;
-            for(UUID id : game.players) {
-                Player player = plugin.getServer().getPlayer(id);
-                if(player == null) continue;
-                HandlePlayerLeaveGame(gameKey, player);
-            }
+        if(startingGames.contains(gameKey)) {
+            CancelGame(gameKey);
+            return;
+        }
+        if(activeGames.contains(gameKey)) {
+            Game game = InternalEndGame(gameKey);
             plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_ending", game.gameName));
         }
     }
 
+    public static void ResetGame(@NonNull String gameKey) {
+        Game game = GetGame(gameKey);
+        if(game == null) return;
+
+        for(UUID player : game.players) {
+            game.hiders.remove(player);
+            game.seekers.remove(player);
+            game.oobPlayers.removeIf((oobPlayer) -> oobPlayer.id == player);
+        }
+    }
+
+    public static void RestartGame(@NonNull String gameKey) {
+        StartGame(gameKey);
+    }
+
+    private static Game InternalEndGame(@NonNull String gameKey) {
+        Game game = GetGame(gameKey);
+        assert game != null;
+        UUID[] ids = game.players.toArray(new UUID[0]);
+
+        for(UUID id : ids) {
+            Player player = plugin.getServer().getPlayer(id);
+            if(player == null) continue;
+            HandlePlayerLeaveGame(gameKey, player, PlayerLeaveGameReason.GAME_END);
+        }
+
+        startingGames.remove(gameKey);
+        activeGames.remove(gameKey);
+
+        GameEndEvent gameEnd = new GameEndEvent(gameKey);
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                Bukkit.getPluginManager().callEvent(gameEnd);
+            }
+        }.runTaskAsynchronously(plugin);
+
+        return game;
+    }
+
+    public static String GetKey(@NonNull Game game) {
+        for(String s : games.keySet()) {
+            if(games.get(s) == game) {
+                return s;
+            }
+        }
+        return null;
+    }
+
     public static ArrayList<String> GetJoinableGames() {
-        ArrayList<String> joinableGames = (ArrayList<String>) startingGames.clone();
+        ArrayList<String> joinableGames = new ArrayList<>(startingGames);
         joinableGames.addAll(activeGames);
         return joinableGames;
     }
@@ -359,27 +418,94 @@ public class GameManager {
 
     private static void StartGame(@NonNull String gameKey) {
         startingGames.remove(gameKey);
-        activeGames.add(gameKey);
+        if(!activeGames.contains(gameKey))
+            activeGames.add(gameKey);
         GameStartEvent gameStart = new GameStartEvent(gameKey);
         try {
             Bukkit.getPluginManager().callEvent(gameStart);
         } catch(Exception e) {
             System.out.println(e.getMessage());
         }
-        new PlayGameRunnable(gameKey, Objects.requireNonNull(GetGame(gameKey)).props.gameLength).run();
+        if(gameStart.isCancelled()) {
+            return;
+        }
+        Game game = GetGame(gameKey);
+        assert game != null;
+
+        if(game.props.gameLength > 0) {
+            new PlayGameRunnable(gameKey, game.props.gameLength).run();
+        } else {
+            for(UUID p : game.players) {
+                Player player = plugin.getServer().getPlayer(p);
+                if(player==null) continue;
+                if(game.startGameLocation != null) {
+                    TeleportInAsyncContext(player, game.startGameLocation);
+                }
+                player.sendMessage(MessageManager.GetMessageByKey("broadcast.game_start_no_length"));
+            }
+        }
+
+        game.hasEnded = false;
+
+        for(UUID pl : game.players) {
+            Player player = plugin.getServer().getPlayer(pl);
+            assert player != null;
+            player.sendMessage(MessageManager.GetMessageByKey("broadcast.game_hide_time", PrettyifySeconds(game.props.hideTime)));
+        }
+
+        for(UUID id : game.seekers) {
+            Player player = plugin.getServer().getPlayer(id);
+            assert player != null;
+            PotionEffect blindness = new PotionEffect(PotionEffectType.BLINDNESS, game.props.hideTime*20, 120, true, true);
+            PotionEffect slowness = new PotionEffect(PotionEffectType.SLOW, game.props.hideTime*20, 120, true, true);
+            PotionEffect speed = new PotionEffect(PotionEffectType.SPEED, 400, game.props.seekerSpeedStrength, true, true);
+
+            ApplyEffectInAsyncContext(player, blindness);
+            ApplyEffectInAsyncContext(player, slowness);
+            ApplyEffectInAsyncContext(player, speed);
+        }
     }
 
-    private static void HandlePlayerLeaveGame(@NonNull String gameKey, Player player) {
+    private static void HandlePlayerLeaveGame(@NonNull String gameKey, Player player, PlayerLeaveGameReason reason) {
         player.sendMessage(MessageManager.GetMessageByKey("info.leave_game", gameKey));
-        RemovePlayerFromAllGames(player.getUniqueId());
+        player.removePotionEffect(PotionEffectType.SPEED);
+        RemovePlayerFromAllGames(player.getUniqueId(), reason);
     }
 
     private static void HandleDisqualified(Player player) {
         player.sendMessage(MessageManager.GetMessageByKey("info.disqualified"));
-        RemovePlayerFromAllGames(player.getUniqueId());
+        RemovePlayerFromAllGames(player.getUniqueId(), PlayerLeaveGameReason.DISQUALIFICATION);
     }
 
     private static void HandleStartingGame(@NonNull String gameKey, int timeUntilStart) {
         new StartGameRunnable(gameKey, timeUntilStart).run();
+    }
+
+    private static void ApplyEffectInAsyncContext(final Player player, final PotionEffect type){
+        BukkitTask task = new BukkitRunnable() {
+            @Override
+            public void run() {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        player.addPotionEffect(type);
+                    }
+                }.runTask(plugin);
+            }
+        }.runTaskAsynchronously(plugin);
+    }
+
+    private static void TeleportInAsyncContext(final Player player, final Location loc){
+        BukkitTask task = new BukkitRunnable() {
+            @Override
+            public void run() {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        player.teleport(loc);
+                    }
+                }.runTask(plugin);
+            }
+        }.runTaskAsynchronously(plugin);
     }
 }

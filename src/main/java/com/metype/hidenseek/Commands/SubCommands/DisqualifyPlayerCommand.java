@@ -1,7 +1,8 @@
 package com.metype.hidenseek.Commands.SubCommands;
 
-import com.metype.hidenseek.Errors.PlayerJoinGameError;
+import com.metype.hidenseek.Errors.PlayerLeaveGameError;
 import com.metype.hidenseek.Game.Game;
+import com.metype.hidenseek.Handlers.PlayerLeaveGameReason;
 import com.metype.hidenseek.Utilities.GameManager;
 import com.metype.hidenseek.Utilities.MessageManager;
 import org.bukkit.command.Command;
@@ -10,7 +11,7 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-public class JoinGameCommand implements CommandExecutor {
+public class DisqualifyPlayerCommand implements CommandExecutor {
 
     @Override
     public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, @NonNull String[] args) {
@@ -18,22 +19,11 @@ public class JoinGameCommand implements CommandExecutor {
             sender.sendMessage(MessageManager.GetMessageByKey("error.players_only"));
             return false;
         }
-        if(args.length == 0) {
-            sender.sendMessage(MessageManager.GetMessageByKey("error.not_enough_args"));
-            return false;
-        }
-        PlayerJoinGameError err = GameManager.PutPlayerInGame(args[0], p.getUniqueId());
+        Game game = GameManager.GetGame(p.getUniqueId());
+        PlayerLeaveGameError err = GameManager.RemovePlayerFromAllGames(p.getUniqueId(), PlayerLeaveGameReason.LEAVE_REQUEST);
         switch (err) {
-            case PlayerAlreadyInGame -> {
-                sender.sendMessage(MessageManager.GetMessageByKey("error.already_in_game"));
-                return false;
-            }
-            case GameInProgress -> {
-                sender.sendMessage(MessageManager.GetMessageByKey("error.game.in_progress"));
-                return false;
-            }
-            case GameInactive -> {
-                sender.sendMessage(MessageManager.GetMessageByKey("error.game.inactive"));
+            case PlayerNotInGame -> {
+                sender.sendMessage(MessageManager.GetMessageByKey("error.not_in_game"));
                 return false;
             }
             case GameDoesNotExist -> {
@@ -41,9 +31,8 @@ public class JoinGameCommand implements CommandExecutor {
                 return false;
             }
             case Okay -> {
-                Game game = GameManager.GetGame(args[0]);
                 assert game != null;
-                sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.join", game.gameName));
+                sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.leave", game.gameName));
                 return false;
             }
         }

@@ -4,6 +4,8 @@ import com.google.gson.*;
 import com.metype.hidenseek.Game.Game;
 import com.metype.hidenseek.Game.GameProperties;
 import com.metype.hidenseek.Game.Polygon;
+import org.bukkit.Bukkit;
+import org.bukkit.Location;
 
 import java.lang.reflect.Type;
 
@@ -43,6 +45,19 @@ public class GameDeserializer implements JsonDeserializer<Game> {
         JsonElement gameProps = gameObject.get("props");
         if(gameProps == null) gameObj.props = new GameProperties();
         else gameObj.props = (new Gson()).fromJson(gameProps, GameProperties.class);
+
+        JsonElement gameStartObj = gameObject.get("gameStart");
+        if(gameStartObj == null) gameObj.startGameLocation = null;
+        else {
+            JsonObject startObj = gameStartObj.getAsJsonObject();
+            String worldName = startObj.get("world").getAsString();
+            float x = startObj.get("x").getAsFloat();
+            float y = startObj.get("y").getAsFloat();
+            float z = startObj.get("z").getAsFloat();
+            float yaw = startObj.get("yaw").getAsFloat();
+            float pitch = startObj.get("pitch").getAsFloat();
+            gameObj.startGameLocation = new Location(Bukkit.getWorld(worldName), x, y, z, yaw, pitch);
+        }
 
         return gameObj;
     }

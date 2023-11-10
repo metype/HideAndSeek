@@ -15,43 +15,47 @@ import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
 import org.bukkit.block.Block;
-import org.bukkit.block.data.BlockData;
 import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.entity.EntityDamageByEntityEvent;
-import org.bukkit.event.entity.EntityPotionEffectEvent;
-import org.bukkit.event.entity.EntityToggleGlideEvent;
-import org.bukkit.event.entity.ProjectileLaunchEvent;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockPlaceEvent;
+import org.bukkit.event.block.SignChangeEvent;
+import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.InventoryOpenEvent;
+import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
-import org.bukkit.util.BlockIterator;
-import org.bukkit.util.Vector;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 public class HideAndSeekEventHandler implements Listener {
 
     private final Plugin plugin;
-    private Scoreboard mainScoreboard;
     private Team hidersTeam, seekersTeam;
 
     public HideAndSeekEventHandler(Plugin p) {
         plugin = p;
-        mainScoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
+        Scoreboard mainScoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
         hidersTeam = null;
         seekersTeam = null;
         for (Team team : mainScoreboard.getTeams()) {
@@ -76,22 +80,35 @@ public class HideAndSeekEventHandler implements Listener {
     public void onGameStart(GameStartEvent e) {
         Game game = GameManager.GetGame(e.getGameKey());
         if(game == null) return;
-//        if(game.players.size() < 3) {
-//            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_cancelled_not_enough_players", game.gameName));
-//            e.setCancelled(true);
-//            return;
-//        }
+        if(game.players.size() < 2) {
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_cancelled_not_enough_players", game.gameName));
+            e.setCancelled(true);
+            return;
+        }
         plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting", Objects.requireNonNull(GameManager.GetGame(e.getGameKey())).gameName));
         AssignTeams(game);
     }
 
     @EventHandler
-    public void onGameEnd(GameEndEvent e) {
+    public void OnGameEnd(GameEndEvent e) {
         Game game = GameManager.GetGame(e.getGameKey());
         if(game == null) return;
-        if(!game.props.autoNewGame) return;
-        plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_ended", Objects.requireNonNull(GameManager.GetGame(e.getGameKey())).gameName));
-        GameManager.StartGame(e.getGameKey(), game.props.autoNewGameStartTime);
+        for(UUID id : game.players) {
+            Player player = Bukkit.getPlayer(id);
+            if(player == null) continue;
+            hidersTeam.removeEntry(player.getName());
+            seekersTeam.removeEntry(player.getName());
+        }
+    }
+
+    @EventHandler
+    public void OnPlayerLeaveGame(PlayerLeaveGameEvent e) {
+        if(e.getReason() == PlayerLeaveGameReason.GAME_END) return;
+        Game game = GameManager.GetGame(e.getGameKey());
+        if(game == null) return;
+        if(game.hiders.size() == 0 || game.players.size() == game.hiders.size()) {
+            LetGameEnd(e.getGameKey());
+        }
     }
 
     private void DrawPolygon(Player p, Polygon poly) {
@@ -109,7 +126,7 @@ public class HideAndSeekEventHandler implements Listener {
         }
     }
 
-    private void AssignTeams(Game game) {
+    private void AssignTeams(@NonNull Game game) {
         Random rng = new Random();
         for(int i=0; i<Math.min(game.props.startingSeekers, game.players.size()-1); i++){
             Player player = plugin.getServer().getPlayer(game.players.get(rng.nextInt(game.players.size())));
@@ -121,7 +138,11 @@ public class HideAndSeekEventHandler implements Listener {
             }
             game.seekers.add(player.getUniqueId());
             seekersTeam.addEntry(player.getName());
-            player.sendMessage(MessageManager.GetMessageByKey("info.joined_seekers"));
+            player.sendTitle(MessageManager.GetMessageByKey("info.joined_seekers"), "", 10, 40, 10);
+
+//            player.addPotionEffect(blindness);
+//            player.addPotionEffect(slowness);
+//            player.addPotionEffect(speedEffect);
         }
         for(UUID id : game.players) {
             Player player = plugin.getServer().getPlayer(id);
@@ -132,34 +153,73 @@ public class HideAndSeekEventHandler implements Listener {
             }
             game.hiders.add(id);
             hidersTeam.addEntry(player.getName());
-            player.sendMessage(MessageManager.GetMessageByKey("info.joined_hiders"));
+            player.sendTitle(MessageManager.GetMessageByKey("info.joined_hiders"), "", 10, 40, 10);
+        }
+    }
+
+    private void LetGameEnd(@NonNull String gameKey) {
+        Game game = GameManager.GetGame(gameKey);
+        assert game != null;
+
+        if(GameManager.IsGameStarting(gameKey)) return;
+        if(game.hasEnded) return;
+        game.hasEnded = true;
+
+        if(game.hiders.size() != 1) {
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_no_winner", game.gameName));
+        } else {
+            Player winningPlayer = plugin.getServer().getPlayer(game.hiders.get(0));
+
+            assert winningPlayer != null;
+
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_win", game.gameName, winningPlayer.getName()));
+        }
+
+        if(game.props.autoNewGame) {
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_auto_restart", game.gameName, ""+game.props.autoNewGameStartTime));
+            GameManager.ResetGame(gameKey);
+
+            Runnable startGameDelay = () -> GameManager.RestartGame(gameKey);
+            ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
+            executor.schedule(startGameDelay, game.props.autoNewGameStartTime, TimeUnit.SECONDS);
         }
     }
 
     @EventHandler
-    public void onHit(EntityDamageByEntityEvent e) {
+    public void OnHit(EntityDamageByEntityEvent e) {
         if(!(e.getEntity() instanceof Player && e.getDamager() instanceof Player)) return;
         if(!GameManager.IsPlayerInAnyGame(e.getEntity().getUniqueId())) return;
 
-        Game victimGame = GameManager.GetGame(e.getEntity().getUniqueId());
+        Game game = GameManager.GetGame(e.getEntity().getUniqueId());
         Game damagerGame = GameManager.GetGame(e.getDamager().getUniqueId());
 
-        if(victimGame != damagerGame || victimGame == null) {
+        if(game != damagerGame || game == null) {
             return;
         }
 
         e.setCancelled(true);
 
         if (e.getEntity() instanceof Player whoWasHit && e.getDamager() instanceof Player whoHit) {
-            if (victimGame.hiders.contains(whoWasHit.getUniqueId()) && victimGame.seekers.contains(whoHit.getUniqueId())) {
+            if (game.hiders.contains(whoWasHit.getUniqueId()) && game.seekers.contains(whoHit.getUniqueId())) {
+                if(whoHit.hasPotionEffect(PotionEffectType.BLINDNESS)) {
+                    return;
+                }
                 whoWasHit.playSound(whoWasHit.getLocation(), "minecraft:entity.arrow.hit_player", 1, 1);
                 hidersTeam.removeEntry(whoWasHit.getName());
                 seekersTeam.addEntry(whoWasHit.getName());
-                victimGame.hiders.remove(whoWasHit.getUniqueId());
-                victimGame.seekers.add(whoWasHit.getUniqueId());
-                e.getEntity().sendMessage(MessageManager.GetMessageByKey("info.joined_seekers"));
-                if(victimGame.props.seekerSpeedStrength > 0) {
-                    PotionEffect speedEffect = new PotionEffect(PotionEffectType.SPEED, 20, victimGame.props.seekerSpeedStrength, true, true);
+
+                if(game.hiders.size() <= 1) {
+                    String gameKey = GameManager.GetKey(game);
+                    assert gameKey != null;
+                    LetGameEnd(gameKey);
+                    return;
+                }
+
+                game.hiders.remove(whoWasHit.getUniqueId());
+                game.seekers.add(whoWasHit.getUniqueId());
+                whoWasHit.sendTitle(MessageManager.GetMessageByKey("info.joined_seekers"), "", 10, 40, 10);
+                if(game.props.seekerSpeedStrength > 0) {
+                    PotionEffect speedEffect = new PotionEffect(PotionEffectType.SPEED, 20, game.props.seekerSpeedStrength, true, true);
                     whoWasHit.addPotionEffect(speedEffect);
                 }
             }
@@ -194,14 +254,25 @@ public class HideAndSeekEventHandler implements Listener {
 
     @EventHandler
     public void OnEntityToggleGlide(EntityToggleGlideEvent e) {
-        if(e.getEntity() instanceof Player shooter) {
+        if(e.getEntity() instanceof Player player) {
             if(e.isGliding()) {
-                Game game = GameManager.GetGame(shooter.getUniqueId());
+                Game game = GameManager.GetGame(player.getUniqueId());
                 if(game == null) return;
                 if(!game.props.allowElytra) {
                     e.setCancelled(true);
-                    shooter.sendMessage(MessageManager.GetMessageByKey("info.game.elytra_disabled", game.gameName));
+                    player.sendMessage(MessageManager.GetMessageByKey("info.game.elytra_disabled", game.gameName));
                 }
+            }
+        }
+    }
+
+    @EventHandler
+    public void OnEntityDamage(EntityDamageEvent e) {
+        if(e.getEntity() instanceof Player player) {
+            Game game = GameManager.GetGame(player.getUniqueId());
+            if(game == null) return;
+            if(!game.props.allowDamage) {
+                e.setCancelled(true);
             }
         }
     }
@@ -220,7 +291,7 @@ public class HideAndSeekEventHandler implements Listener {
         if(e.getCause() == EntityPotionEffectEvent.Cause.EXPIRATION) {
             for(Player player : plugin.getServer().getOnlinePlayers()) {
                 if(seekersTeam.hasEntry(player.getName())) {
-                    player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 7, game.props.seekerSpeedStrength));
+                    player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 7*20, game.props.seekerSpeedStrength));
                 }
             }
         }
@@ -231,7 +302,7 @@ public class HideAndSeekEventHandler implements Listener {
         BoundsEditingPlayer player = PluginStorage.GetBoundsEditingPlayer(e.getPlayer().getUniqueId());
         if(player != null) {
             Game game = GameManager.GetGame(player.gameKey);
-            if(game == null) {
+            if (game == null) {
                 PluginStorage.PlayerStopEditingGameBounds(player.id);
                 return;
             }
@@ -239,43 +310,61 @@ public class HideAndSeekEventHandler implements Listener {
 
             ItemStack heldItem = e.getPlayer().getInventory().getItem(heldItemSlot);
 
-            if(heldItem == null) return;
+            if (heldItem == null) return;
 
-            if(heldItem.getType() == Material.GOLDEN_HOE) {
+            if (heldItem.getType() == Material.GOLDEN_HOE) {
                 e.setCancelled(true);
-                if(e.getAction() == Action.RIGHT_CLICK_BLOCK) {
-            
+                if (e.getAction() == Action.RIGHT_CLICK_BLOCK) {
+
                     Location blockPos = Objects.requireNonNull(e.getClickedBlock()).getLocation();
 
                     Polygon.Point additionalPoint = new Polygon.Point(blockPos.getBlockX(), blockPos.getBlockZ());
 
-                    if(game.gameBounds.points.contains(additionalPoint)) {
+                    if (game.gameBounds.points.contains(additionalPoint)) {
                         return;
                     }
 
                     game.gameBounds.addPoint(additionalPoint);
                     e.getPlayer().sendMessage(MessageManager.GetMessageByKey("info.bounds.add_point", additionalPoint.toString()));
-                    if(game.gameBounds.points.size() < 3) return;
+                    if (game.gameBounds.points.size() < 3) return;
 
                     DrawPolygon(e.getPlayer(), game.gameBounds);
                 }
-                if(e.getAction() == Action.LEFT_CLICK_BLOCK) {
+                if (e.getAction() == Action.LEFT_CLICK_BLOCK) {
                     Location blockPos = Objects.requireNonNull(e.getClickedBlock()).getLocation();
                     Polygon.Point additionalPoint = new Polygon.Point(blockPos.getBlockX(), blockPos.getBlockZ());
 
-                    if(game.gameBounds.points.contains(additionalPoint)) {
+                    if (game.gameBounds.points.contains(additionalPoint)) {
                         game.gameBounds.points.remove(additionalPoint);
                         e.getPlayer().sendMessage(MessageManager.GetMessageByKey("info.bounds.remove_point", additionalPoint.toString()));
                     }
                 }
             }
+        } else {
+
         }
+    }
+
+    @EventHandler
+    public void onSignChange(SignChangeEvent e) {
+        Game game = GameManager.GetGame(e.getPlayer().getUniqueId());
+        if (game == null) return;
+        e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void OnOpenInventory(InventoryOpenEvent e){
+        if(e.getInventory().getType() == InventoryType.PLAYER
+        || e.getInventory().getType() == InventoryType.ENDER_CHEST) return;
+        if(!(e.getPlayer() instanceof Player player)) return;
+        if(!GameManager.IsPlayerInAnyGame(player.getUniqueId())) return;
+        e.setCancelled(true);
     }
 
     @EventHandler
     public void OnPlayerLogout(PlayerQuitEvent e) {
         PluginStorage.PlayerStopEditingGameBounds(e.getPlayer().getUniqueId());
-        GameManager.RemovePlayerFromAllGames(e.getPlayer().getUniqueId());
+        GameManager.RemovePlayerFromAllGames(e.getPlayer().getUniqueId(), PlayerLeaveGameReason.LEFT_GAME);
     }
 
     @EventHandler
@@ -296,6 +385,11 @@ public class HideAndSeekEventHandler implements Listener {
         Game game = GameManager.GetGame(e.getPlayer().getUniqueId());
 
         if(game == null) return;
+
+        if(e.getPlayer().hasPotionEffect(PotionEffectType.BLINDNESS) && game.seekers.contains(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
+            return;
+        }
 
         boolean couldBeOOB = game.props.forceHidersInBounds && game.hiders.contains(e.getPlayer().getUniqueId());
         couldBeOOB |= game.props.forceSeekersInBounds && game.seekers.contains(e.getPlayer().getUniqueId());
@@ -334,5 +428,17 @@ public class HideAndSeekEventHandler implements Listener {
         if(!isNotInBounds) {
             game.oobPlayers.removeIf((player) -> player.id == e.getPlayer().getUniqueId());
         }
+    }
+
+    @EventHandler
+    public void OnBlockPlace(BlockPlaceEvent e) {
+        if(!GameManager.IsPlayerInAnyGame(e.getPlayer().getUniqueId())) return;
+        e.setCancelled(true);
+    }
+
+    @EventHandler
+    public void OnBlockBreak(BlockBreakEvent e) {
+        if(!GameManager.IsPlayerInAnyGame(e.getPlayer().getUniqueId())) return;
+        e.setCancelled(true);
     }
 }

@@ -30,6 +30,20 @@ public class SetBoundsCommand implements CommandExecutor {
             if(PluginStorage.GetBoundsEditingPlayer(player.getUniqueId()) != null) {
                 PluginStorage.PlayerStopEditingGameBounds(player.getUniqueId());
                 sender.sendMessage(MessageManager.GetMessageByKey("success.command.edit_bounds.cancel"));
+                for(int i=0; i < player.getInventory().getContents().length; i++){
+                    ItemStack item = player.getInventory().getContents()[i];
+                    if(item == null) {
+                        continue;
+                    }
+                    if(item.getType() == Material.GOLDEN_HOE) {
+                        if(item.hasItemMeta()) {
+                            if(Objects.requireNonNull(item.getItemMeta()).getDisplayName().equalsIgnoreCase("§6Bounds Edit Tool")) {
+                                player.getInventory().clear(i);
+                                break;
+                            }
+                        }
+                    }
+                }
                 return true;
             }
             if(args.length < 1) {

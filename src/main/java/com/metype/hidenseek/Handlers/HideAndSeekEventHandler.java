@@ -130,7 +130,7 @@ public class HideAndSeekEventHandler implements Listener {
     private void AssignTeams(@NonNull Game game) {
         Random rng = new Random();
         for(int i=0; i<Math.min(game.props.startingSeekers, game.players.size()-1); i++){
-            Player player = plugin.getServer().getPlayer(game.players.get(rng.nextInt(game.players.size())));
+            Player player = Bukkit.getPlayer(game.players.get(rng.nextInt(game.players.size())));
             if(player == null) continue;
 
             if(game.seekers.contains(player.getUniqueId())) {
@@ -142,7 +142,7 @@ public class HideAndSeekEventHandler implements Listener {
             player.sendTitle(MessageManager.GetMessageByKey("info.joined_seekers"), "", 10, 40, 10);
         }
         for(UUID id : game.players) {
-            Player player = plugin.getServer().getPlayer(id);
+            Player player = Bukkit.getPlayer(id);
             if(player == null) continue;
 
             if(game.seekers.contains(id)) {
@@ -386,6 +386,7 @@ public class HideAndSeekEventHandler implements Listener {
 
             DrawPolygon(e.getPlayer(), game.gameBounds);
         }
+
         if(!GameManager.IsPlayerInAnyGame(e.getPlayer().getUniqueId())) return;
         Game game = GameManager.GetGame(e.getPlayer().getUniqueId());
 

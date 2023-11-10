@@ -1,7 +1,7 @@
 package com.metype.hidenseek.Serializers;
 
 import com.google.gson.*;
-import com.metype.hidenseek.Polygon;
+import com.metype.hidenseek.Game.Polygon;
 
 import java.lang.reflect.Type;
 

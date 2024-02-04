@@ -1,10 +1,12 @@
 package com.metype.hidenseek.Utilities;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.UUID;
 
 public class PluginStorage {
     public static ArrayList<BoundsEditingPlayer> playersEditingBounds = new ArrayList<>();
+    public static HashSet<UUID> playersInHNSUI = new HashSet<>();
 
     public static boolean PlayerStartEditingGameBounds(String gameKey, UUID playerID) {
         for(BoundsEditingPlayer player : playersEditingBounds) {

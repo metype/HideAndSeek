@@ -4,7 +4,9 @@ import org.bukkit.Material;
 
 public class GameProperties {
     public boolean invisibleSeekers = false, forceHidersInBounds = true, forceSeekersInBounds = false,
-    autoNewGame = true, allowElytra = false, allowEnderPearls = false, allowChorusFruit = false, allowDamage = false;
+            autoNewGame = true, allowElytra = false, allowEnderPearls = false, allowChorusFruit = false,
+            allowShootBows = false, allowSnowballs = true, allowDamage = false, allowTeleport = true,
+            allowOpeningContainers = false, projectileTagEnabled = false, meleeTagEnabled = true;
     public int gameLength = 300, seekerSpeedStrength = 2, outOfBoundsTime = 10, startingSeekers = 1,
     autoNewGameStartTime = 30, minHeightBounds = 0, maxHeightBounds = 64, hideTime = 30;
     public String gameName = "";
@@ -21,7 +23,13 @@ public class GameProperties {
                 props.allowElytra == allowElytra &&
                 props.allowEnderPearls == allowEnderPearls &&
                 props.allowChorusFruit == allowChorusFruit &&
+                props.allowTeleport == allowTeleport &&
+                props.allowShootBows == allowShootBows &&
+                props.allowSnowballs == allowSnowballs &&
+                props.allowOpeningContainers == allowOpeningContainers &&
                 props.allowDamage == allowDamage &&
+                props.projectileTagEnabled == projectileTagEnabled &&
+                props.meleeTagEnabled == meleeTagEnabled &&
                 props.gameLength == gameLength &&
                 props.seekerSpeedStrength == seekerSpeedStrength &&
                 props.outOfBoundsTime == outOfBoundsTime &&

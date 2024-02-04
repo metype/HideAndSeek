@@ -5,18 +5,16 @@ import com.metype.hidenseek.Game.Game;
 import com.metype.hidenseek.Game.OutOfBoundsPlayer;
 import com.metype.hidenseek.Game.OutOfBoundsTimer;
 import com.metype.hidenseek.Game.Polygon;
-import com.metype.hidenseek.Utilities.BoundsEditingPlayer;
-import com.metype.hidenseek.Utilities.GameManager;
-import com.metype.hidenseek.Utilities.MessageManager;
-import com.metype.hidenseek.Utilities.PluginStorage;
+import com.metype.hidenseek.Main;
+import com.metype.hidenseek.Runnables.PlayGameRunnable;
+import com.metype.hidenseek.Utilities.*;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
-import org.bukkit.entity.EnderPearl;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
@@ -24,20 +22,21 @@ import org.bukkit.event.block.BlockBreakEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.*;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryOpenEvent;
 import org.bukkit.event.inventory.InventoryType;
-import org.bukkit.event.player.PlayerInteractEvent;
-import org.bukkit.event.player.PlayerItemConsumeEvent;
-import org.bukkit.event.player.PlayerMoveEvent;
-import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
+import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
+import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
@@ -50,6 +49,8 @@ public class HideAndSeekEventHandler implements Listener {
 
     private final Plugin plugin;
     private Team hidersTeam, seekersTeam;
+
+    private final ArrayList<ActionBarInfo> actionBarInfoList = new ArrayList<>();
 
     public HideAndSeekEventHandler(Plugin p) {
         plugin = p;
@@ -86,6 +87,66 @@ public class HideAndSeekEventHandler implements Listener {
         plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting", Objects.requireNonNull(GameManager.GetGame(e.getGameKey())).props.gameName));
         AssignTeams(game);
         game.oobPlayers.clear();
+
+        for(UUID p : game.players) {
+            Player player = plugin.getServer().getPlayer(p);
+            if(player==null) continue;
+            game.playersThatCanTeleport.add(p);
+            if(game.startGameLocation != null) TeleportInAsyncContext(player, game.startGameLocation);
+        }
+
+        if(game.props.gameLength > 0) {
+            new PlayGameRunnable(e.getGameKey(), game.props.gameLength).run();
+        } else {
+            game.players.forEach(playerID -> Objects.requireNonNull(Bukkit.getPlayer(playerID)).sendMessage(MessageManager.GetMessageByKey("broadcast.game_start_no_length")));
+        }
+
+        game.hasEnded = false;
+
+        for(UUID pl : game.players) {
+            Player player = plugin.getServer().getPlayer(pl);
+            assert player != null;
+            player.sendMessage(MessageManager.GetMessageByKey("broadcast.game_hide_time", StringUtils.PrettyifySeconds(game.props.hideTime)));
+        }
+        for(UUID id : game.seekers) {
+            Player player = plugin.getServer().getPlayer(id);
+            assert player != null;
+            PotionEffect blindness = new PotionEffect(PotionEffectType.BLINDNESS, game.props.hideTime*20, 120, true, true);
+            PotionEffect slowness = new PotionEffect(PotionEffectType.SLOW, game.props.hideTime*20, 120, true, true);
+            PotionEffect speed = new PotionEffect(PotionEffectType.SPEED, 400, game.props.seekerSpeedStrength, true, true);
+
+            ApplyEffectInAsyncContext(player, blindness);
+            ApplyEffectInAsyncContext(player, slowness);
+            ApplyEffectInAsyncContext(player, speed);
+        }
+    }
+
+    private static void ApplyEffectInAsyncContext(final Player player, final PotionEffect type){
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        player.addPotionEffect(type);
+                    }
+                }.runTask(JavaPlugin.getPlugin(Main.class));
+            }
+        }.runTaskAsynchronously(JavaPlugin.getPlugin(Main.class));
+    }
+
+    private static void TeleportInAsyncContext(final Player player, final Location loc){
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                new BukkitRunnable() {
+                    @Override
+                    public void run() {
+                        player.teleport(loc);
+                    }
+                }.runTask(JavaPlugin.getPlugin(Main.class));
+            }
+        }.runTaskAsynchronously(JavaPlugin.getPlugin(Main.class));
     }
 
     @EventHandler
@@ -137,7 +198,7 @@ public class HideAndSeekEventHandler implements Listener {
             }
             game.seekers.add(player.getUniqueId());
             seekersTeam.addEntry(player.getName());
-            player.sendTitle(MessageManager.GetMessageByKey("info.joined_seekers"), "", 10, 40, 10);
+            player.sendTitle(MessageManager.GetMessageByKey("info.joined_seekers_title"), "", 10, 40, 10);
         }
         for(UUID id : game.players) {
             Player player = Bukkit.getPlayer(id);
@@ -177,16 +238,75 @@ public class HideAndSeekEventHandler implements Listener {
             Runnable startGameDelay = () -> GameManager.RestartGame(gameKey);
             ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
             executor.schedule(startGameDelay, game.props.autoNewGameStartTime, TimeUnit.SECONDS);
+        } else {
+            GameManager.EndGame(gameKey);
+        }
+    }
+
+    private enum TagType {
+        MELEE,
+        PROJECTILE,
+    }
+
+    private void CheckForTag(Player attacker, Player victim, Game game, TagType type) {
+        if (game.hiders.contains(victim.getUniqueId()) && game.seekers.contains(attacker.getUniqueId())) {
+            if(attacker.hasPotionEffect(PotionEffectType.BLINDNESS)) {
+                return;
+            }
+            if(type == TagType.MELEE && !game.props.meleeTagEnabled) {
+                ShowActionBarText(attacker, MessageManager.GetMessageByKey("info.game.melee_tag_disabled", game.props.gameName), 2, 2);
+                return;
+            }
+            if(type == TagType.PROJECTILE && !game.props.projectileTagEnabled) {
+                ShowActionBarText(attacker, MessageManager.GetMessageByKey("info.game.projectile_tag_disabled", game.props.gameName), 2, 2);
+                return;
+            }
+            victim.playSound(victim.getLocation(), "minecraft:entity.arrow.hit_player", 1, 1);
+            hidersTeam.removeEntry(victim.getName());
+            seekersTeam.addEntry(victim.getName());
+
+            if(game.hiders.size() <= 1) {
+                String gameKey = GameManager.GetKey(game);
+                assert gameKey != null;
+                LetGameEnd(gameKey);
+                return;
+            }
+
+            game.hiders.remove(victim.getUniqueId());
+            game.seekers.add(victim.getUniqueId());
+
+            for(UUID pl : game.hiders) {
+                Player p = Bukkit.getPlayer(pl);
+                if(p == null) continue;
+                p.sendMessage(MessageManager.GetMessageByKey("info.player_hit", victim.getName(), String.valueOf(game.hiders.size())));
+            }
+
+            victim.sendMessage(MessageManager.GetMessageByKey("info.joined_seekers_chat"));
+            victim.sendTitle(MessageManager.GetMessageByKey("info.joined_seekers_title"), "", 10, 40, 10);
+            if(game.props.seekerSpeedStrength > 0) {
+                PotionEffect speedEffect = new PotionEffect(PotionEffectType.SPEED, 20, game.props.seekerSpeedStrength, true, true);
+                victim.addPotionEffect(speedEffect);
+            }
         }
     }
 
     @EventHandler
     public void OnHit(EntityDamageByEntityEvent e) {
-        if(!(e.getEntity() instanceof Player && e.getDamager() instanceof Player)) return;
+        Player attacker;
+        TagType type = TagType.MELEE;
+        if(!(e.getEntity() instanceof Player && e.getDamager() instanceof Player)) {
+            if(!(e.getEntity() instanceof Player)) return;
+            if(!(e.getDamager() instanceof Projectile projectile)) return;
+            if(!(projectile.getShooter() instanceof Player shooterPlayer)) return;
+            attacker = shooterPlayer;
+            type = TagType.PROJECTILE;
+        } else {
+            attacker = (Player)e.getDamager();
+        }
         if(!GameManager.IsPlayerInAnyGame(e.getEntity().getUniqueId())) return;
 
         Game game = GameManager.GetGame(e.getEntity().getUniqueId());
-        Game damagerGame = GameManager.GetGame(e.getDamager().getUniqueId());
+        Game damagerGame = GameManager.GetGame(attacker.getUniqueId());
 
         if(game != damagerGame || game == null) {
             return;
@@ -194,39 +314,18 @@ public class HideAndSeekEventHandler implements Listener {
 
         e.setCancelled(true);
 
-        if (e.getEntity() instanceof Player whoWasHit && e.getDamager() instanceof Player whoHit) {
-            if (game.hiders.contains(whoWasHit.getUniqueId()) && game.seekers.contains(whoHit.getUniqueId())) {
-                if(whoHit.hasPotionEffect(PotionEffectType.BLINDNESS)) {
-                    return;
-                }
-                whoWasHit.playSound(whoWasHit.getLocation(), "minecraft:entity.arrow.hit_player", 1, 1);
-                hidersTeam.removeEntry(whoWasHit.getName());
-                seekersTeam.addEntry(whoWasHit.getName());
+        CheckForTag(attacker, (Player) e.getEntity(), game, type);
+    }
 
-                if(game.hiders.size() <= 1) {
-                    String gameKey = GameManager.GetKey(game);
-                    assert gameKey != null;
-                    LetGameEnd(gameKey);
-                    return;
-                }
-
-                game.hiders.remove(whoWasHit.getUniqueId());
-                game.seekers.add(whoWasHit.getUniqueId());
-
-                for(UUID pl : game.hiders) {
-                    Player p = Bukkit.getPlayer(pl);
-                    if(p == null) continue;
-                    p.sendMessage(MessageManager.GetMessageByKey("info.player_hit", whoWasHit.getName(), String.valueOf(game.hiders.size())));
-                }
-
-                whoWasHit.sendMessage(MessageManager.GetMessageByKey("info.joined_seekers_chat"));
-                whoWasHit.sendTitle(MessageManager.GetMessageByKey("info.joined_seekers_title"), "", 10, 40, 10);
-                if(game.props.seekerSpeedStrength > 0) {
-                    PotionEffect speedEffect = new PotionEffect(PotionEffectType.SPEED, 20, game.props.seekerSpeedStrength, true, true);
-                    whoWasHit.addPotionEffect(speedEffect);
-                }
-            }
+    @EventHandler
+    public void OnPlayerTeleport(PlayerTeleportEvent e) {
+        Game game = GameManager.GetGame(e.getPlayer().getUniqueId());
+        if(game == null) return;
+        if(!game.props.allowTeleport && !game.playersThatCanTeleport.contains(e.getPlayer().getUniqueId())) {
+            e.setCancelled(true);
+            ShowActionBarText(e.getPlayer(), MessageManager.GetMessageByKey("info.game.teleport_disabled", game.props.gameName), 1, 3);
         }
+        game.playersThatCanTeleport.remove(e.getPlayer().getUniqueId());
     }
 
     @EventHandler
@@ -237,7 +336,23 @@ public class HideAndSeekEventHandler implements Listener {
                 if(game == null) return;
                 if(!game.props.allowEnderPearls) {
                     e.setCancelled(true);
-                    shooter.sendMessage(MessageManager.GetMessageByKey("info.game.ender_pearls_disabled", game.props.gameName));
+                    ShowActionBarText(shooter, MessageManager.GetMessageByKey("info.game.ender_pearls_disabled", game.props.gameName), 1, 2);
+                }
+            }
+            if(e.getEntity() instanceof Arrow) {
+                Game game = GameManager.GetGame(shooter.getUniqueId());
+                if(game == null) return;
+                if(!game.props.allowShootBows) {
+                    e.setCancelled(true);
+                    ShowActionBarText(shooter, MessageManager.GetMessageByKey("info.game.shoot_bows_disabled", game.props.gameName), 1, 2);
+                }
+            }
+            if(e.getEntity() instanceof Snowball) {
+                Game game = GameManager.GetGame(shooter.getUniqueId());
+                if(game == null) return;
+                if(!game.props.allowSnowballs) {
+                    e.setCancelled(true);
+                    ShowActionBarText(shooter, MessageManager.GetMessageByKey("info.game.snowball_disabled", game.props.gameName), 1, 2);
                 }
             }
         }
@@ -250,7 +365,7 @@ public class HideAndSeekEventHandler implements Listener {
             if(game == null) return;
             if(!game.props.allowChorusFruit) {
                 e.setCancelled(true);
-                e.getPlayer().sendMessage(MessageManager.GetMessageByKey("info.game.chorus_fruit_disabled", game.props.gameName));
+                ShowActionBarText(e.getPlayer(), MessageManager.GetMessageByKey("info.game.chorus_fruit_disabled", game.props.gameName), 1, 2);
             }
         }
     }
@@ -263,7 +378,7 @@ public class HideAndSeekEventHandler implements Listener {
                 if(game == null) return;
                 if(!game.props.allowElytra) {
                     e.setCancelled(true);
-                    player.sendMessage(MessageManager.GetMessageByKey("info.game.elytra_disabled", game.props.gameName));
+                    ShowActionBarText(player, MessageManager.GetMessageByKey("info.game.elytra_disabled", game.props.gameName), 1, 2);
                 }
             }
         }
@@ -274,9 +389,16 @@ public class HideAndSeekEventHandler implements Listener {
         if(e.getEntity() instanceof Player player) {
             Game game = GameManager.GetGame(player.getUniqueId());
             if(game == null) return;
-            if(!game.props.allowDamage) {
-                e.setCancelled(true);
-            }
+            e.setCancelled(!game.props.allowDamage);
+        }
+    }
+
+    @EventHandler
+    public void OnProjectileDamage(ProjectileHitEvent e) {
+        if(e.getEntity() instanceof Player player) {
+            Game game = GameManager.GetGame(player.getUniqueId());
+            if(game == null) return;
+            e.setCancelled(!game.props.allowDamage);
         }
     }
 
@@ -360,13 +482,17 @@ public class HideAndSeekEventHandler implements Listener {
         if(e.getInventory().getType() == InventoryType.PLAYER
         || e.getInventory().getType() == InventoryType.ENDER_CHEST) return;
         if(!(e.getPlayer() instanceof Player player)) return;
-        if(!GameManager.IsPlayerInAnyGame(player.getUniqueId())) return;
+        Game game = GameManager.GetGame(player.getUniqueId());
+        if(game == null) return;
+        if(PluginStorage.playersInHNSUI.contains(player.getUniqueId())) return;
+        if(game.props.allowOpeningContainers) return;
         e.setCancelled(true);
     }
 
     @EventHandler
     public void OnPlayerLogout(PlayerQuitEvent e) {
         PluginStorage.PlayerStopEditingGameBounds(e.getPlayer().getUniqueId());
+        PluginStorage.playersInHNSUI.remove(e.getPlayer().getUniqueId());
         GameManager.RemovePlayerFromAllGames(e.getPlayer().getUniqueId(), PlayerLeaveGameReason.LEFT_GAME);
     }
 
@@ -421,11 +547,11 @@ public class HideAndSeekEventHandler implements Listener {
                 public void count(float current) {
                     Player player = this.plugin.getServer().getPlayer(this.player.id);
                     if(player == null) return;
-                    player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(MessageManager.GetMessageByKey("info.out_of_bounds", current)));
+                    ShowActionBarText(player, MessageManager.GetMessageByKey("info.out_of_bounds", current), 0, 0);
                     if(current < 0.25) {
                         var err = GameManager.DisqualifyPlayer(player.getUniqueId());
                         if(err != PlayerLeaveGameError.Okay) {
-                            plugin.getLogger().log(Level.WARNING, "Error disqualifying player");
+                            plugin.getLogger().log(Level.WARNING, "Error disqualifying player: " + err);
                         }
                     }
                 }
@@ -434,6 +560,29 @@ public class HideAndSeekEventHandler implements Listener {
         }
         if(!isNotInBounds) {
             game.oobPlayers.removeIf((player) -> player.id == e.getPlayer().getUniqueId());
+        }
+    }
+
+    private void ShowActionBarText(Player player, String text, int priority, int secondsMustBeActive) {
+        ActionBarInfo currentInfo = null;
+        for(var info : actionBarInfoList) {
+            if(info.getPlayer() == player) {
+                currentInfo = info;
+            }
+        }
+        boolean shouldShowNewText;
+        if(currentInfo != null) {
+            shouldShowNewText = false;
+            if(currentInfo.isSuperceded(priority) || currentInfo.isExpired()) {
+                shouldShowNewText = true;
+                actionBarInfoList.remove(currentInfo);
+            }
+        } else {
+            shouldShowNewText = true;
+        }
+        if(shouldShowNewText) {
+            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(text));
+            actionBarInfoList.add(new ActionBarInfo(player, secondsMustBeActive, priority));
         }
     }
 

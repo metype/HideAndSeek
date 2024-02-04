@@ -3,6 +3,7 @@ package com.metype.hidenseek.Commands.SubCommands;
 import com.metype.hidenseek.Game.Game;
 import com.metype.hidenseek.Utilities.GameManager;
 import com.metype.hidenseek.Utilities.MessageManager;
+import com.metype.hidenseek.Utilities.PluginStorage;
 import de.themoep.inventorygui.*;
 import net.wesjd.anvilgui.AnvilGUI;
 import org.bukkit.ChatColor;
@@ -26,7 +27,7 @@ import java.util.regex.Pattern;
 
 public class GameCommand implements CommandExecutor {
 
-    private static final HashMap<UUID, String> playersEditingGames = new HashMap<>();
+    public static final HashMap<UUID, String> playersEditingGames = new HashMap<>();
 
     @Override
     public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String[] args) {
@@ -194,6 +195,7 @@ public class GameCommand implements CommandExecutor {
     }
 
     private boolean EditGame(CommandSender sender, String gameKey) {
+        PluginStorage.playersInHNSUI.add(((Player)sender).getUniqueId());
         if(gameKey == null) {
             List<String> games = GameManager.GetGames();
             InventoryGui gui = SetUpPagedGUI(1, (Player)sender, "Game List", false);
@@ -205,6 +207,10 @@ public class GameCommand implements CommandExecutor {
                 group.addElement(new DynamicGuiElement('e', (viewer) -> new StaticGuiElement('e', new ItemStack(gameOption.props.displayMaterial), GameCommand::OnGameToEditSelected, name.isEmpty() ? game : name, game)));
             }
             gui.addElement(group);
+            gui.setCloseAction((close) -> {
+                PluginStorage.playersInHNSUI.remove(close.getPlayer().getUniqueId());
+                return true;
+            });
             FinishPreparingPagedGUI(gui);
             gui.show((((Player) sender).getPlayer()));
         } else {
@@ -238,6 +244,10 @@ public class GameCommand implements CommandExecutor {
         }
         gui.addElement(group);
         FinishPreparingPagedGUI(gui);
+        gui.setCloseAction((close) -> {
+            PluginStorage.playersInHNSUI.remove(close.getPlayer().getUniqueId());
+            return true;
+        });
         gui.show(who);
     }
 

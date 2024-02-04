@@ -17,6 +17,8 @@ public class Game {
 
     public ArrayList<OutOfBoundsPlayer> oobPlayers = new ArrayList<>();
 
+    public final ArrayList<UUID> playersThatCanTeleport = new ArrayList<>();
+
     public boolean isActive, hasEnded = false;
 
     public GameProperties props = new GameProperties();

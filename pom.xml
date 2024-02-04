@@ -6,7 +6,7 @@
 
     <groupId>com.metype</groupId>
     <artifactId>HideNSeek</artifactId>
-    <version>1.1.1-HOTFIX</version>
+    <version>1.2.1-HOTFIX</version>
     <packaging>jar</packaging>
 
     <name>Tag</name>

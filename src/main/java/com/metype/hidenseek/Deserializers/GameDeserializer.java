@@ -17,8 +17,6 @@ public class GameDeserializer implements JsonDeserializer<Game> {
         JsonObject gameObject = jsonElement.getAsJsonObject();
 
         JsonElement gameName = gameObject.get("gameName");
-        if(gameName == null) throw new JsonParseException("No game name!");
-        else gameObj.gameName = gameName.getAsString();
 
         Polygon gameBounds;
 
@@ -45,6 +43,10 @@ public class GameDeserializer implements JsonDeserializer<Game> {
         JsonElement gameProps = gameObject.get("props");
         if(gameProps == null) gameObj.props = new GameProperties();
         else gameObj.props = (new Gson()).fromJson(gameProps, GameProperties.class);
+
+        if(gameName != null) {
+            gameObj.props.gameName = gameName.getAsString();
+        }
 
         JsonElement gameStartObj = gameObject.get("gameStart");
         if(gameStartObj == null) gameObj.startGameLocation = null;

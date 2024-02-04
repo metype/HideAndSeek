@@ -11,7 +11,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class SaveCommand implements CommandExecutor {
 
     @Override
-    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, @NonNull String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String[] args) {
         boolean hasPermission = (sender instanceof ConsoleCommandSender);
         if(!hasPermission) {
             hasPermission = sender.hasPermission("hns.save");

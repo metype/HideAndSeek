@@ -4,7 +4,7 @@ import org.bukkit.event.Cancellable;
 
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class GameStartEvent extends Event implements Cancellable {
 
@@ -33,7 +33,7 @@ public class GameStartEvent extends Event implements Cancellable {
         if (cancelled) GameManager.CancelGame(gameKey);
     }
 
-    @Override
+    @Override @NonNull
     public HandlerList getHandlers() {
         return handlers;
     }

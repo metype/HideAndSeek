@@ -24,7 +24,7 @@ public class GameSerializer implements JsonSerializer<Game> {
                 .create();
 
         result.add("gameStart", json.toJsonTree(game.startGameLocation));
-        result.add("gameName", new JsonPrimitive(game.gameName));
+//        result.add("gameName", new JsonPrimitive(game.gameName));
         result.add("gameBounds", json.toJsonTree(game.gameBounds, Polygon.class));
         result.add("props", json.toJsonTree(game.props));
 

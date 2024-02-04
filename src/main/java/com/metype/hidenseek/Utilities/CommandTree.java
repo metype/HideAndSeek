@@ -36,6 +36,6 @@ public class CommandTree {
         if(this.args != null) {
             System.out.println("Possible Error! Args function for " + String.join(",", commandNameLambda.get()) + " has been set multiple times!");
         }
-        this.args = () -> Arrays.stream(args).toList();;
+        this.args = () -> Arrays.stream(args).toList();
     }
 }

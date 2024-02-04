@@ -5,13 +5,14 @@ import com.metype.hidenseek.Utilities.MessageManager;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 import java.util.Arrays;
 
 public class HideAndSeek implements CommandExecutor {
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String[] args) {
         if(args.length < 1) {
             return (new HelpCommand()).onCommand(sender, command, label, new String[]{});
         }

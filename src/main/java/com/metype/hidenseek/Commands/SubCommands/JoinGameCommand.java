@@ -13,7 +13,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class JoinGameCommand implements CommandExecutor {
 
     @Override
-    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, @NonNull String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String[] args) {
         if(!(sender instanceof Player p)) {
             sender.sendMessage(MessageManager.GetMessageByKey("error.players_only"));
             return false;
@@ -43,7 +43,7 @@ public class JoinGameCommand implements CommandExecutor {
             case Okay -> {
                 Game game = GameManager.GetGame(args[0]);
                 assert game != null;
-                sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.join", game.gameName));
+                sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.join", game.props.gameName));
                 return false;
             }
         }

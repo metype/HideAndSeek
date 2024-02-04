@@ -53,18 +53,7 @@ public class HideAndSeekTabComplete implements TabCompleter {
 
         CommandTree reloadCommand = new CommandTree("reload");
 
-        CommandTree helpCommand = new CommandTree("help");
-
-        CommandTree helpPageCommand = new CommandTree("page");
-        helpPageCommand.SetArgs("1","2","3","4","5");
-        CommandTree helpGameCommand = new CommandTree("game");
-        helpGameCommand.SetArgs("1","2","3","4","5");
-        CommandTree helpSaveCommand = new CommandTree("save");
-        helpSaveCommand.SetArgs("1","2","3","4","5");
-        CommandTree helpReloadCommand = new CommandTree("reload");
-        helpReloadCommand.SetArgs("1","2","3","4","5");
-
-        helpCommand.AddSubCommands(helpPageCommand, helpGameCommand, helpSaveCommand, helpReloadCommand);
+        CommandTree helpCommand = getHelpCommandTree();
 
         CommandTree resetConfigCommand = new CommandTree("reset_config");
         resetConfigCommand.SetArgs("messages");
@@ -83,6 +72,22 @@ public class HideAndSeekTabComplete implements TabCompleter {
                 saveCommand,
                 setBoundsCommand
         );
+    }
+
+    private static CommandTree getHelpCommandTree() {
+        CommandTree helpCommand = new CommandTree("help");
+
+        CommandTree helpPageCommand = new CommandTree("page");
+        helpPageCommand.SetArgs("1","2","3","4","5");
+        CommandTree helpGameCommand = new CommandTree("game");
+        helpGameCommand.SetArgs("1","2","3","4","5");
+        CommandTree helpSaveCommand = new CommandTree("save");
+        helpSaveCommand.SetArgs("1","2","3","4","5");
+        CommandTree helpReloadCommand = new CommandTree("reload");
+        helpReloadCommand.SetArgs("1","2","3","4","5");
+
+        helpCommand.AddSubCommands(helpPageCommand, helpGameCommand, helpSaveCommand, helpReloadCommand);
+        return helpCommand;
     }
 
 

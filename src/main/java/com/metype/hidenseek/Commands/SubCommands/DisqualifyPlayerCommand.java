@@ -14,7 +14,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class DisqualifyPlayerCommand implements CommandExecutor {
 
     @Override
-    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, @NonNull String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String[] args) {
         if(!(sender instanceof Player p)) {
             sender.sendMessage(MessageManager.GetMessageByKey("error.players_only"));
             return false;
@@ -32,7 +32,7 @@ public class DisqualifyPlayerCommand implements CommandExecutor {
             }
             case Okay -> {
                 assert game != null;
-                sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.leave", game.gameName));
+                sender.sendMessage(MessageManager.GetMessageByKey("success.command.game.leave", game.props.gameName));
                 return false;
             }
         }

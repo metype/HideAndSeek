@@ -1,5 +1,6 @@
 package com.metype.hidenseek.Handlers;
 
+import com.metype.hidenseek.Errors.PlayerLeaveGameError;
 import com.metype.hidenseek.Game.Game;
 import com.metype.hidenseek.Game.OutOfBoundsPlayer;
 import com.metype.hidenseek.Game.OutOfBoundsTimer;
@@ -14,7 +15,6 @@ import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.Particle;
-import org.bukkit.block.Block;
 import org.bukkit.entity.EnderPearl;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
@@ -30,7 +30,6 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerMoveEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
-import org.bukkit.inventory.InventoryView;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.potion.PotionEffect;
@@ -39,7 +38,6 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
@@ -81,11 +79,11 @@ public class HideAndSeekEventHandler implements Listener {
         Game game = GameManager.GetGame(e.getGameKey());
         if(game == null) return;
         if(game.players.size() < 2) {
-            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_cancelled_not_enough_players", game.gameName));
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_cancelled_not_enough_players", game.props.gameName));
             e.setCancelled(true);
             return;
         }
-        plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting", Objects.requireNonNull(GameManager.GetGame(e.getGameKey())).gameName));
+        plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting", Objects.requireNonNull(GameManager.GetGame(e.getGameKey())).props.gameName));
         AssignTeams(game);
         game.oobPlayers.clear();
     }
@@ -163,17 +161,17 @@ public class HideAndSeekEventHandler implements Listener {
         game.hasEnded = true;
 
         if(game.hiders.size() != 1) {
-            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_no_winner", game.gameName));
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_no_winner", game.props.gameName));
         } else {
             Player winningPlayer = plugin.getServer().getPlayer(game.hiders.get(0));
 
             assert winningPlayer != null;
 
-            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_win", game.gameName, winningPlayer.getName()));
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_win", game.props.gameName, winningPlayer.getName()));
         }
 
         if(game.props.autoNewGame) {
-            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_auto_restart", game.gameName, ""+game.props.autoNewGameStartTime));
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_auto_restart", game.props.gameName, ""+game.props.autoNewGameStartTime));
             GameManager.ResetGame(gameKey);
 
             Runnable startGameDelay = () -> GameManager.RestartGame(gameKey);
@@ -234,12 +232,12 @@ public class HideAndSeekEventHandler implements Listener {
     @EventHandler
     public void OnProjectileLaunch(ProjectileLaunchEvent e) {
         if(e.getEntity().getShooter() instanceof Player shooter) {
-            if(e.getEntity() instanceof EnderPearl pearl) {
+            if(e.getEntity() instanceof EnderPearl) {
                 Game game = GameManager.GetGame(shooter.getUniqueId());
                 if(game == null) return;
                 if(!game.props.allowEnderPearls) {
                     e.setCancelled(true);
-                    shooter.sendMessage(MessageManager.GetMessageByKey("info.game.ender_pearls_disabled", game.gameName));
+                    shooter.sendMessage(MessageManager.GetMessageByKey("info.game.ender_pearls_disabled", game.props.gameName));
                 }
             }
         }
@@ -252,7 +250,7 @@ public class HideAndSeekEventHandler implements Listener {
             if(game == null) return;
             if(!game.props.allowChorusFruit) {
                 e.setCancelled(true);
-                e.getPlayer().sendMessage(MessageManager.GetMessageByKey("info.game.chorus_fruit_disabled", game.gameName));
+                e.getPlayer().sendMessage(MessageManager.GetMessageByKey("info.game.chorus_fruit_disabled", game.props.gameName));
             }
         }
     }
@@ -265,7 +263,7 @@ public class HideAndSeekEventHandler implements Listener {
                 if(game == null) return;
                 if(!game.props.allowElytra) {
                     e.setCancelled(true);
-                    player.sendMessage(MessageManager.GetMessageByKey("info.game.elytra_disabled", game.gameName));
+                    player.sendMessage(MessageManager.GetMessageByKey("info.game.elytra_disabled", game.props.gameName));
                 }
             }
         }
@@ -346,7 +344,7 @@ public class HideAndSeekEventHandler implements Listener {
                 }
             }
         } else {
-
+            PluginStorage.PlayerStopEditingGameBounds(e.getPlayer().getUniqueId());
         }
     }
 
@@ -425,7 +423,10 @@ public class HideAndSeekEventHandler implements Listener {
                     if(player == null) return;
                     player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(MessageManager.GetMessageByKey("info.out_of_bounds", current)));
                     if(current < 0.25) {
-                        GameManager.DisqualifyPlayer(player.getUniqueId());
+                        var err = GameManager.DisqualifyPlayer(player.getUniqueId());
+                        if(err != PlayerLeaveGameError.Okay) {
+                            plugin.getLogger().log(Level.WARNING, "Error disqualifying player");
+                        }
                     }
                 }
 

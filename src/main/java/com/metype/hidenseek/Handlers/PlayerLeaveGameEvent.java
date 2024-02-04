@@ -1,22 +1,18 @@
 package com.metype.hidenseek.Handlers;
 
-import com.metype.hidenseek.Utilities.GameManager;
-import org.bukkit.entity.Player;
-import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class PlayerLeaveGameEvent extends Event {
 
-    private PlayerLeaveGameReason reason;
-    private final Player player;
+    private final PlayerLeaveGameReason reason;
     private final String gameKey;
 
     private static final HandlerList handlers = new HandlerList();
 
-    public PlayerLeaveGameEvent(String gameKey, Player player, PlayerLeaveGameReason reason) {
+    public PlayerLeaveGameEvent(String gameKey, PlayerLeaveGameReason reason) {
         this.gameKey = gameKey;
-        this.player = player;
         this.reason = reason;
     }
 
@@ -28,7 +24,7 @@ public class PlayerLeaveGameEvent extends Event {
         return reason;
     }
 
-    @Override
+    @Override @NonNull
     public HandlerList getHandlers() {
         return handlers;
     }

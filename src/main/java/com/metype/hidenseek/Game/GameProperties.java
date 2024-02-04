@@ -1,10 +1,14 @@
 package com.metype.hidenseek.Game;
 
+import org.bukkit.Material;
+
 public class GameProperties {
     public boolean invisibleSeekers = false, forceHidersInBounds = true, forceSeekersInBounds = false,
     autoNewGame = true, allowElytra = false, allowEnderPearls = false, allowChorusFruit = false, allowDamage = false;
     public int gameLength = 300, seekerSpeedStrength = 2, outOfBoundsTime = 10, startingSeekers = 1,
     autoNewGameStartTime = 30, minHeightBounds = 0, maxHeightBounds = 64, hideTime = 30;
+    public String gameName = "";
+    public Material displayMaterial = Material.GOLD_BLOCK;
 
     @Override
     public boolean equals(Object obj) {
@@ -25,6 +29,8 @@ public class GameProperties {
                 props.autoNewGameStartTime == autoNewGameStartTime &&
                 props.minHeightBounds == minHeightBounds &&
                 props.maxHeightBounds == maxHeightBounds &&
-                props.hideTime == hideTime;
+                props.hideTime == hideTime &&
+                props.gameName.equals(gameName) &&
+                displayMaterial == props.displayMaterial;
     }
 }

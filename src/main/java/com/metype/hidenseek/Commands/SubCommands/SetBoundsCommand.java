@@ -1,7 +1,6 @@
 package com.metype.hidenseek.Commands.SubCommands;
 
 import com.metype.hidenseek.Game.Game;
-import com.metype.hidenseek.Game.Polygon;
 import com.metype.hidenseek.Utilities.GameManager;
 import com.metype.hidenseek.Utilities.MessageManager;
 import com.metype.hidenseek.Utilities.PluginStorage;
@@ -9,7 +8,6 @@ import org.bukkit.Material;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
-import org.bukkit.command.ConsoleCommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -20,7 +18,7 @@ import java.util.Objects;
 public class SetBoundsCommand implements CommandExecutor {
 
     @Override
-    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, @NonNull String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String[] args) {
         if(!(sender instanceof Player player)) {
             return true;
         }
@@ -83,7 +81,9 @@ public class SetBoundsCommand implements CommandExecutor {
                 return false;
             }
 
-            PluginStorage.PlayerStartEditingGameBounds(args[0], player.getUniqueId());
+            if(!PluginStorage.PlayerStartEditingGameBounds(args[0], player.getUniqueId())) {
+                sender.sendMessage(MessageManager.GetMessageByKey("error.inventory.already_editing_bounds"));
+            }
 
             ItemStack editTool = new ItemStack(Material.GOLDEN_HOE);
             ItemMeta editToolMeta = editTool.getItemMeta();

@@ -8,7 +8,7 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class HelpCommand implements CommandExecutor {
 
     @Override
-    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, @NonNull String[] args) {
+    public boolean onCommand(@NonNull CommandSender sender, @NonNull Command command, @NonNull String label, String[] args) {
         return true;
     }
 }

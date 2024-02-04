@@ -1,9 +1,8 @@
 package com.metype.hidenseek.Handlers;
 
-import com.metype.hidenseek.Utilities.GameManager;
-import org.bukkit.event.Cancellable;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
+import org.checkerframework.checker.nullness.qual.NonNull;
 
 public class GameEndEvent extends Event {
 
@@ -20,7 +19,7 @@ public class GameEndEvent extends Event {
         return gameKey;
     }
 
-    @Override
+    @Override @NonNull
     public HandlerList getHandlers() {
         return handlers;
     }

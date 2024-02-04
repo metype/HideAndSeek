@@ -6,7 +6,7 @@
 
     <groupId>com.metype</groupId>
     <artifactId>HideNSeek</artifactId>
-    <version>1.0-SNAPSHOT</version>
+    <version>1.1.1-HOTFIX</version>
     <packaging>jar</packaging>
 
     <name>Tag</name>
@@ -38,6 +38,16 @@
                             <goal>shade</goal>
                         </goals>
                         <configuration>
+<!--                            <relocations>-->
+<!--                                <relocation>-->
+<!--                                    <pattern>net.wesjd.anvilgui</pattern>-->
+<!--                                    <shadedPattern>com.metype.hidenseek.anvilgui</shadedPattern>-->
+<!--                                </relocation>-->
+<!--                                <relocation>-->
+<!--                                    <pattern>de.themoep.inventorygui</pattern>-->
+<!--                                    <shadedPattern>com.metype.hidenseek.inventorygui</shadedPattern>-->
+<!--                                </relocation>-->
+<!--                            </relocations>-->
                             <createDependencyReducedPom>false</createDependencyReducedPom>
                         </configuration>
                     </execution>
@@ -61,6 +71,14 @@
             <id>sonatype</id>
             <url>https://oss.sonatype.org/content/groups/public/</url>
         </repository>
+        <repository>
+            <id>minebench-repo</id>
+            <url>https://repo.minebench.de/</url>
+        </repository>
+        <repository>
+            <id>codemc-snapshots</id>
+            <url>https://repo.codemc.io/repository/maven-snapshots/</url>
+        </repository>
     </repositories>
 
     <dependencies>
@@ -69,6 +87,17 @@
             <artifactId>spigot-api</artifactId>
             <version>1.20.2-R0.1-SNAPSHOT</version>
             <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>de.themoep</groupId>
+            <artifactId>inventorygui</artifactId>
+            <version>1.6.1-SNAPSHOT</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>net.wesjd</groupId>
+            <artifactId>anvilgui</artifactId>
+            <version>1.9.2-SNAPSHOT</version>
         </dependency>
     </dependencies>
 </project>

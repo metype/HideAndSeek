@@ -1,11 +1,9 @@
 package com.metype.hidenseek.Serializers;
 
 import com.google.gson.*;
-import com.metype.hidenseek.Game.Polygon;
 import org.bukkit.Location;
 
 import java.lang.reflect.Type;
-import java.util.Map;
 import java.util.Objects;
 
 public class LocationSerializer implements JsonSerializer<Location> {

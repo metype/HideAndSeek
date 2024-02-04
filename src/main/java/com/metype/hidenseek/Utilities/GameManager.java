@@ -37,9 +37,9 @@ import org.checkerframework.checker.nullness.qual.NonNull;
 public class GameManager {
     private static HashMap<String, Game> games;
 
-    private static ArrayList<String> startingGames = new ArrayList<>();
+    private static final ArrayList<String> startingGames = new ArrayList<>();
 
-    private static ArrayList<String> activeGames = new ArrayList<>();
+    private static final ArrayList<String> activeGames = new ArrayList<>();
     private static Plugin plugin;
 
     private static File configDir;
@@ -48,8 +48,8 @@ public class GameManager {
     private static Gson gameDeserializer;
 
     static class StartGameRunnable implements Runnable {
-        int timeUntilStart = 0;
-        String gameKey = "";
+        int timeUntilStart;
+        String gameKey;
 
         public StartGameRunnable(@NonNull String gameKey, int timeUntilStart) {
             this.gameKey = gameKey;
@@ -65,7 +65,7 @@ public class GameManager {
 
                 // This looks ugly, I'd love to make it nicer
                 if((((int)timeTilStartMins) % 5 == 0 && (int)(timeTilStartMins)==timeTilStartMins) || timeTilStartMins <= 1) {
-                    plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting_soon", Objects.requireNonNull(GetGame(gameKey)).gameName, PrettyifySeconds(timeUntilStart)));
+                    plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting_soon", Objects.requireNonNull(GetGame(gameKey)).props.gameName, PrettyifySeconds(timeUntilStart)));
                 }
 
                 int delayTime = timeUntilStart % 30 != 0 ? timeUntilStart % 30 : 30;
@@ -77,8 +77,8 @@ public class GameManager {
     }
 
     static class PlayGameRunnable implements Runnable {
-        int timeUntilGameEnd = 0;
-        String gameKey = "";
+        int timeUntilGameEnd;
+        String gameKey;
 
         public PlayGameRunnable(@NonNull String gameKey, int timeUntilGameEnd) {
             this.gameKey = gameKey;
@@ -105,7 +105,7 @@ public class GameManager {
                     for(UUID id : game.players) {
                         Player player = plugin.getServer().getPlayer(id);
                         if(player == null) continue;
-                        player.sendMessage(MessageManager.GetMessageByKey("broadcast.game_ending_soon", Objects.requireNonNull(GetGame(gameKey)).gameName, PrettyifySeconds(timeUntilGameEnd)));
+                        player.sendMessage(MessageManager.GetMessageByKey("broadcast.game_ending_soon", Objects.requireNonNull(GetGame(gameKey)).props.gameName, PrettyifySeconds(timeUntilGameEnd)));
                     }
                 }
 
@@ -208,6 +208,9 @@ public class GameManager {
     public static void NewGame(@NonNull String gameKey, @NonNull Game newGame) {
         games.put(gameKey, newGame);
     }
+    public static void DeleteGame(@NonNull String gameKey) {
+        games.remove(gameKey);
+    }
 
     public static List<String> GetGames() {
         return new ArrayList<>(games.keySet());
@@ -295,7 +298,7 @@ public class GameManager {
         game.hiders.remove(playerID);
         game.seekers.remove(playerID);
 
-        PlayerLeaveGameEvent leaveGameEvent = new PlayerLeaveGameEvent(gameKey, Bukkit.getPlayer(playerID), reason);
+        PlayerLeaveGameEvent leaveGameEvent = new PlayerLeaveGameEvent(gameKey, reason);
         try {
             Bukkit.getPluginManager().callEvent(leaveGameEvent);
         } catch(Exception e) {
@@ -342,7 +345,7 @@ public class GameManager {
     public static void CancelGame(@NonNull String gameKey) {
         if(startingGames.contains(gameKey) || activeGames.contains(gameKey)) {
             Game game = InternalEndGame(gameKey);
-            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_cancelled", game.gameName));
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_cancelled", game.props.gameName));
         }
     }
 
@@ -353,7 +356,7 @@ public class GameManager {
         }
         if(activeGames.contains(gameKey)) {
             Game game = InternalEndGame(gameKey);
-            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_ending", game.gameName));
+            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_ending", game.props.gameName));
         }
     }
 

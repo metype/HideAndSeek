@@ -1,6 +1,7 @@
 package com.metype.hidenseek;
 
 import com.metype.hidenseek.Commands.HideAndSeek;
+import com.metype.hidenseek.Handlers.DisabledEventsHandler;
 import com.metype.hidenseek.Handlers.HideAndSeekEventHandler;
 import com.metype.hidenseek.Handlers.HideAndSeekTabComplete;
 import com.metype.hidenseek.Utilities.GameManager;
@@ -17,7 +18,9 @@ public final class Main extends JavaPlugin {
         Objects.requireNonNull(this.getCommand("hidenseek")).setExecutor(new HideAndSeek());
         Objects.requireNonNull(this.getCommand("hidenseek")).setTabCompleter(new HideAndSeekTabComplete());
 
-        getServer().getPluginManager().registerEvents(new HideAndSeekEventHandler(this), this);
+        getServer().getPluginManager().registerEvents(new HideAndSeekEventHandler(), this);
+        getServer().getPluginManager().registerEvents(new DisabledEventsHandler(), this);
+
         MessageManager.Init(this);
         GameManager.Init(this);
     }

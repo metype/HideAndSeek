@@ -5,8 +5,9 @@ import org.bukkit.Material;
 public class GameProperties {
     public boolean invisibleSeekers = false, forceHidersInBounds = true, forceSeekersInBounds = false,
             autoNewGame = true, allowElytra = false, allowEnderPearls = false, allowChorusFruit = false,
-            allowShootBows = false, allowSnowballs = true, allowDamage = false, allowTeleport = true,
-            allowOpeningContainers = false, projectileTagEnabled = false, meleeTagEnabled = true;
+            allowShootBows = false, allowThrowSnowballs = true, allowThrowEggs = true, allowDamage = false,
+            allowTeleport = true, allowOpeningContainers = false, projectileTagEnabled = false,
+            meleeTagEnabled = true;
     public int gameLength = 300, seekerSpeedStrength = 2, outOfBoundsTime = 10, startingSeekers = 1,
     autoNewGameStartTime = 30, minHeightBounds = 0, maxHeightBounds = 64, hideTime = 30;
     public String gameName = "";
@@ -14,6 +15,7 @@ public class GameProperties {
 
     @Override
     public boolean equals(Object obj) {
+        if(obj == this) return true;
         if(!(obj instanceof GameProperties props)) return false;
         // This was written at 2 am, and is probably *not* how you should do this :D
         return props.invisibleSeekers == invisibleSeekers &&
@@ -25,7 +27,8 @@ public class GameProperties {
                 props.allowChorusFruit == allowChorusFruit &&
                 props.allowTeleport == allowTeleport &&
                 props.allowShootBows == allowShootBows &&
-                props.allowSnowballs == allowSnowballs &&
+                props.allowThrowSnowballs == allowThrowSnowballs &&
+                props.allowThrowEggs == allowThrowEggs &&
                 props.allowOpeningContainers == allowOpeningContainers &&
                 props.allowDamage == allowDamage &&
                 props.projectileTagEnabled == projectileTagEnabled &&
@@ -39,6 +42,6 @@ public class GameProperties {
                 props.maxHeightBounds == maxHeightBounds &&
                 props.hideTime == hideTime &&
                 props.gameName.equals(gameName) &&
-                displayMaterial == props.displayMaterial;
+                displayMaterial.equals(props.displayMaterial);
     }
 }

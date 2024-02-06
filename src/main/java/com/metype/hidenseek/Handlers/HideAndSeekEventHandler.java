@@ -1,6 +1,9 @@
 package com.metype.hidenseek.Handlers;
 
 import com.metype.hidenseek.Errors.PlayerLeaveGameError;
+import com.metype.hidenseek.Events.GameEndEvent;
+import com.metype.hidenseek.Events.GameStartEvent;
+import com.metype.hidenseek.Events.PlayerLeaveGameEvent;
 import com.metype.hidenseek.Game.Game;
 import com.metype.hidenseek.Game.OutOfBoundsPlayer;
 import com.metype.hidenseek.Game.OutOfBoundsTimer;
@@ -8,8 +11,6 @@ import com.metype.hidenseek.Game.Polygon;
 import com.metype.hidenseek.Main;
 import com.metype.hidenseek.Runnables.PlayGameRunnable;
 import com.metype.hidenseek.Utilities.*;
-import net.md_5.bungee.api.ChatMessageType;
-import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
@@ -18,16 +19,9 @@ import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
-import org.bukkit.event.block.BlockBreakEvent;
-import org.bukkit.event.block.BlockPlaceEvent;
-import org.bukkit.event.block.SignChangeEvent;
 import org.bukkit.event.entity.*;
-import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.inventory.InventoryOpenEvent;
-import org.bukkit.event.inventory.InventoryType;
 import org.bukkit.event.player.*;
 import org.bukkit.inventory.ItemStack;
-import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
@@ -36,7 +30,6 @@ import org.bukkit.scoreboard.Scoreboard;
 import org.bukkit.scoreboard.Team;
 import org.checkerframework.checker.nullness.qual.NonNull;
 
-import java.util.ArrayList;
 import java.util.Objects;
 import java.util.Random;
 import java.util.UUID;
@@ -46,25 +39,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 public class HideAndSeekEventHandler implements Listener {
-
-    private final Plugin plugin;
     private Team hidersTeam, seekersTeam;
 
-    private final ArrayList<ActionBarInfo> actionBarInfoList = new ArrayList<>();
-
-    public HideAndSeekEventHandler(Plugin p) {
-        plugin = p;
+    public HideAndSeekEventHandler() {
         Scoreboard mainScoreboard = Objects.requireNonNull(Bukkit.getScoreboardManager()).getMainScoreboard();
-        hidersTeam = null;
-        seekersTeam = null;
-        for (Team team : mainScoreboard.getTeams()) {
-            if(team.getName().equalsIgnoreCase("hiders")) {
-                hidersTeam = team;
-            }
-            if(team.getName().equalsIgnoreCase("seekers")) {
-                seekersTeam = team;
-            }
-        }
+        hidersTeam = mainScoreboard.getTeam("hiders");
+        seekersTeam = mainScoreboard.getTeam("seekers");
         if(hidersTeam == null) {
             hidersTeam = mainScoreboard.registerNewTeam("hiders");
         }
@@ -72,7 +52,8 @@ public class HideAndSeekEventHandler implements Listener {
             seekersTeam = mainScoreboard.registerNewTeam("seekers");
         }
         hidersTeam.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
-        hidersTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.FOR_OTHER_TEAMS);
+        hidersTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
+        seekersTeam.setOption(Team.Option.COLLISION_RULE, Team.OptionStatus.NEVER);
     }
 
     @EventHandler
@@ -80,16 +61,16 @@ public class HideAndSeekEventHandler implements Listener {
         Game game = GameManager.GetGame(e.getGameKey());
         if(game == null) return;
         if(game.players.size() < 2) {
-            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_cancelled_not_enough_players", game.props.gameName));
+            JavaPlugin.getPlugin(Main.class).getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_cancelled_not_enough_players", game.props.gameName));
             e.setCancelled(true);
             return;
         }
-        plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting", Objects.requireNonNull(GameManager.GetGame(e.getGameKey())).props.gameName));
+        JavaPlugin.getPlugin(Main.class).getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_starting", Objects.requireNonNull(GameManager.GetGame(e.getGameKey())).props.gameName));
         AssignTeams(game);
         game.oobPlayers.clear();
 
         for(UUID p : game.players) {
-            Player player = plugin.getServer().getPlayer(p);
+            Player player = JavaPlugin.getPlugin(Main.class).getServer().getPlayer(p);
             if(player==null) continue;
             game.playersThatCanTeleport.add(p);
             if(game.startGameLocation != null) TeleportInAsyncContext(player, game.startGameLocation);
@@ -104,12 +85,12 @@ public class HideAndSeekEventHandler implements Listener {
         game.hasEnded = false;
 
         for(UUID pl : game.players) {
-            Player player = plugin.getServer().getPlayer(pl);
+            Player player = JavaPlugin.getPlugin(Main.class).getServer().getPlayer(pl);
             assert player != null;
             player.sendMessage(MessageManager.GetMessageByKey("broadcast.game_hide_time", StringUtils.PrettyifySeconds(game.props.hideTime)));
         }
         for(UUID id : game.seekers) {
-            Player player = plugin.getServer().getPlayer(id);
+            Player player = JavaPlugin.getPlugin(Main.class).getServer().getPlayer(id);
             assert player != null;
             PotionEffect blindness = new PotionEffect(PotionEffectType.BLINDNESS, game.props.hideTime*20, 120, true, true);
             PotionEffect slowness = new PotionEffect(PotionEffectType.SLOW, game.props.hideTime*20, 120, true, true);
@@ -151,18 +132,22 @@ public class HideAndSeekEventHandler implements Listener {
 
     @EventHandler
     public void OnGameEnd(GameEndEvent e) {
-        Game game = GameManager.GetGame(e.getGameKey());
-        if(game == null) return;
-        for(UUID id : game.players) {
-            Player player = Bukkit.getPlayer(id);
-            if(player == null) continue;
-            hidersTeam.removeEntry(player.getName());
-            seekersTeam.removeEntry(player.getName());
-        }
+//        Game game = GameManager.GetGame(e.getGameKey());
+//        if(game == null) return;
+////        hidersTeam.
+//        for(UUID id : game.players) {
+//            Player player = Bukkit.getPlayer(id);
+//            if(player == null) continue;
+//            hidersTeam.removeEntry(player.getName());
+//            seekersTeam.removeEntry(player.getName());
+//        }
     }
 
     @EventHandler
     public void OnPlayerLeaveGame(PlayerLeaveGameEvent e) {
+        hidersTeam.removeEntry(e.getPlayer().getName());
+        seekersTeam.removeEntry(e.getPlayer().getName());
+
         if(e.getReason() == PlayerLeaveGameReason.GAME_END) return;
         Game game = GameManager.GetGame(e.getGameKey());
         if(game == null) return;
@@ -222,17 +207,17 @@ public class HideAndSeekEventHandler implements Listener {
         game.hasEnded = true;
 
         if(game.hiders.size() != 1) {
-            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_no_winner", game.props.gameName));
+            JavaPlugin.getPlugin(Main.class).getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_no_winner", game.props.gameName));
         } else {
-            Player winningPlayer = plugin.getServer().getPlayer(game.hiders.get(0));
+            Player winningPlayer = JavaPlugin.getPlugin(Main.class).getServer().getPlayer(game.hiders.get(0));
 
             assert winningPlayer != null;
 
-            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_win", game.props.gameName, winningPlayer.getName()));
+            JavaPlugin.getPlugin(Main.class).getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_win", game.props.gameName, winningPlayer.getName()));
         }
 
         if(game.props.autoNewGame) {
-            plugin.getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_auto_restart", game.props.gameName, ""+game.props.autoNewGameStartTime));
+            JavaPlugin.getPlugin(Main.class).getServer().broadcastMessage(MessageManager.GetMessageByKey("broadcast.game_auto_restart", game.props.gameName, ""+game.props.autoNewGameStartTime));
             GameManager.ResetGame(gameKey);
 
             Runnable startGameDelay = () -> GameManager.RestartGame(gameKey);
@@ -254,11 +239,11 @@ public class HideAndSeekEventHandler implements Listener {
                 return;
             }
             if(type == TagType.MELEE && !game.props.meleeTagEnabled) {
-                ShowActionBarText(attacker, MessageManager.GetMessageByKey("info.game.melee_tag_disabled", game.props.gameName), 2, 2);
+                StringUtils.ShowActionBarText(attacker, MessageManager.GetMessageByKey("info.game.melee_tag_disabled", game.props.gameName), 2, 2);
                 return;
             }
             if(type == TagType.PROJECTILE && !game.props.projectileTagEnabled) {
-                ShowActionBarText(attacker, MessageManager.GetMessageByKey("info.game.projectile_tag_disabled", game.props.gameName), 2, 2);
+                StringUtils.ShowActionBarText(attacker, MessageManager.GetMessageByKey("info.game.projectile_tag_disabled", game.props.gameName), 2, 2);
                 return;
             }
             victim.playSound(victim.getLocation(), "minecraft:entity.arrow.hit_player", 1, 1);
@@ -318,91 +303,6 @@ public class HideAndSeekEventHandler implements Listener {
     }
 
     @EventHandler
-    public void OnPlayerTeleport(PlayerTeleportEvent e) {
-        Game game = GameManager.GetGame(e.getPlayer().getUniqueId());
-        if(game == null) return;
-        if(!game.props.allowTeleport && !game.playersThatCanTeleport.contains(e.getPlayer().getUniqueId())) {
-            e.setCancelled(true);
-            ShowActionBarText(e.getPlayer(), MessageManager.GetMessageByKey("info.game.teleport_disabled", game.props.gameName), 1, 3);
-        }
-        game.playersThatCanTeleport.remove(e.getPlayer().getUniqueId());
-    }
-
-    @EventHandler
-    public void OnProjectileLaunch(ProjectileLaunchEvent e) {
-        if(e.getEntity().getShooter() instanceof Player shooter) {
-            if(e.getEntity() instanceof EnderPearl) {
-                Game game = GameManager.GetGame(shooter.getUniqueId());
-                if(game == null) return;
-                if(!game.props.allowEnderPearls) {
-                    e.setCancelled(true);
-                    ShowActionBarText(shooter, MessageManager.GetMessageByKey("info.game.ender_pearls_disabled", game.props.gameName), 1, 2);
-                }
-            }
-            if(e.getEntity() instanceof Arrow) {
-                Game game = GameManager.GetGame(shooter.getUniqueId());
-                if(game == null) return;
-                if(!game.props.allowShootBows) {
-                    e.setCancelled(true);
-                    ShowActionBarText(shooter, MessageManager.GetMessageByKey("info.game.shoot_bows_disabled", game.props.gameName), 1, 2);
-                }
-            }
-            if(e.getEntity() instanceof Snowball) {
-                Game game = GameManager.GetGame(shooter.getUniqueId());
-                if(game == null) return;
-                if(!game.props.allowSnowballs) {
-                    e.setCancelled(true);
-                    ShowActionBarText(shooter, MessageManager.GetMessageByKey("info.game.snowball_disabled", game.props.gameName), 1, 2);
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void OnPlayerEat(PlayerItemConsumeEvent e) {
-        if(e.getItem().getType() == Material.CHORUS_FRUIT) {
-            Game game = GameManager.GetGame(e.getPlayer().getUniqueId());
-            if(game == null) return;
-            if(!game.props.allowChorusFruit) {
-                e.setCancelled(true);
-                ShowActionBarText(e.getPlayer(), MessageManager.GetMessageByKey("info.game.chorus_fruit_disabled", game.props.gameName), 1, 2);
-            }
-        }
-    }
-
-    @EventHandler
-    public void OnEntityToggleGlide(EntityToggleGlideEvent e) {
-        if(e.getEntity() instanceof Player player) {
-            if(e.isGliding()) {
-                Game game = GameManager.GetGame(player.getUniqueId());
-                if(game == null) return;
-                if(!game.props.allowElytra) {
-                    e.setCancelled(true);
-                    ShowActionBarText(player, MessageManager.GetMessageByKey("info.game.elytra_disabled", game.props.gameName), 1, 2);
-                }
-            }
-        }
-    }
-
-    @EventHandler
-    public void OnEntityDamage(EntityDamageEvent e) {
-        if(e.getEntity() instanceof Player player) {
-            Game game = GameManager.GetGame(player.getUniqueId());
-            if(game == null) return;
-            e.setCancelled(!game.props.allowDamage);
-        }
-    }
-
-    @EventHandler
-    public void OnProjectileDamage(ProjectileHitEvent e) {
-        if(e.getEntity() instanceof Player player) {
-            Game game = GameManager.GetGame(player.getUniqueId());
-            if(game == null) return;
-            e.setCancelled(!game.props.allowDamage);
-        }
-    }
-
-    @EventHandler
     public void OnEffectEnd(EntityPotionEffectEvent e) {
         if(!(e.getEntity() instanceof Player)) return;
         if(!GameManager.IsPlayerInAnyGame(e.getEntity().getUniqueId())) return;
@@ -414,7 +314,7 @@ public class HideAndSeekEventHandler implements Listener {
         if(game.props.seekerSpeedStrength <= 0) return;
 
         if(e.getCause() == EntityPotionEffectEvent.Cause.EXPIRATION) {
-            for(Player player : plugin.getServer().getOnlinePlayers()) {
+            for(Player player : JavaPlugin.getPlugin(Main.class).getServer().getOnlinePlayers()) {
                 if(seekersTeam.hasEntry(player.getName())) {
                     player.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 7*20, game.props.seekerSpeedStrength));
                 }
@@ -471,25 +371,6 @@ public class HideAndSeekEventHandler implements Listener {
     }
 
     @EventHandler
-    public void OnSignChange(SignChangeEvent e) {
-        Game game = GameManager.GetGame(e.getPlayer().getUniqueId());
-        if (game == null) return;
-        e.setCancelled(true);
-    }
-
-    @EventHandler
-    public void OnOpenInventory(InventoryOpenEvent e){
-        if(e.getInventory().getType() == InventoryType.PLAYER
-        || e.getInventory().getType() == InventoryType.ENDER_CHEST) return;
-        if(!(e.getPlayer() instanceof Player player)) return;
-        Game game = GameManager.GetGame(player.getUniqueId());
-        if(game == null) return;
-        if(PluginStorage.playersInHNSUI.contains(player.getUniqueId())) return;
-        if(game.props.allowOpeningContainers) return;
-        e.setCancelled(true);
-    }
-
-    @EventHandler
     public void OnPlayerLogout(PlayerQuitEvent e) {
         PluginStorage.PlayerStopEditingGameBounds(e.getPlayer().getUniqueId());
         PluginStorage.playersInHNSUI.remove(e.getPlayer().getUniqueId());
@@ -541,17 +422,17 @@ public class HideAndSeekEventHandler implements Listener {
             }
             OutOfBoundsPlayer pl = new OutOfBoundsPlayer(e.getPlayer().getUniqueId(), System.currentTimeMillis());
             game.oobPlayers.add(pl);
-            new OutOfBoundsTimer(game.props.outOfBoundsTime, plugin, pl) {
+            new OutOfBoundsTimer(game.props.outOfBoundsTime, JavaPlugin.getPlugin(Main.class), pl) {
 
                 @Override
                 public void count(float current) {
-                    Player player = this.plugin.getServer().getPlayer(this.player.id);
+                    Player player = JavaPlugin.getPlugin(Main.class).getServer().getPlayer(this.player.id);
                     if(player == null) return;
-                    ShowActionBarText(player, MessageManager.GetMessageByKey("info.out_of_bounds", current), 0, 0);
+                    StringUtils.ShowActionBarText(player, MessageManager.GetMessageByKey("info.out_of_bounds", current), 0, 0);
                     if(current < 0.25) {
                         var err = GameManager.DisqualifyPlayer(player.getUniqueId());
                         if(err != PlayerLeaveGameError.Okay) {
-                            plugin.getLogger().log(Level.WARNING, "Error disqualifying player: " + err);
+                            JavaPlugin.getPlugin(Main.class).getLogger().log(Level.WARNING, "Error disqualifying player: " + err);
                         }
                     }
                 }
@@ -561,40 +442,5 @@ public class HideAndSeekEventHandler implements Listener {
         if(!isNotInBounds) {
             game.oobPlayers.removeIf((player) -> player.id == e.getPlayer().getUniqueId());
         }
-    }
-
-    private void ShowActionBarText(Player player, String text, int priority, int secondsMustBeActive) {
-        ActionBarInfo currentInfo = null;
-        for(var info : actionBarInfoList) {
-            if(info.getPlayer() == player) {
-                currentInfo = info;
-            }
-        }
-        boolean shouldShowNewText;
-        if(currentInfo != null) {
-            shouldShowNewText = false;
-            if(currentInfo.isSuperceded(priority) || currentInfo.isExpired()) {
-                shouldShowNewText = true;
-                actionBarInfoList.remove(currentInfo);
-            }
-        } else {
-            shouldShowNewText = true;
-        }
-        if(shouldShowNewText) {
-            player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(text));
-            actionBarInfoList.add(new ActionBarInfo(player, secondsMustBeActive, priority));
-        }
-    }
-
-    @EventHandler
-    public void OnBlockPlace(BlockPlaceEvent e) {
-        if(!GameManager.IsPlayerInAnyGame(e.getPlayer().getUniqueId())) return;
-        e.setCancelled(true);
-    }
-
-    @EventHandler
-    public void OnBlockBreak(BlockBreakEvent e) {
-        if(!GameManager.IsPlayerInAnyGame(e.getPlayer().getUniqueId())) return;
-        e.setCancelled(true);
     }
 }

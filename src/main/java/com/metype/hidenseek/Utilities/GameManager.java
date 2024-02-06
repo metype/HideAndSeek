@@ -7,15 +7,13 @@ import com.metype.hidenseek.Errors.PlayerJoinGameError;
 import com.metype.hidenseek.Errors.PlayerLeaveGameError;
 import com.metype.hidenseek.Game.Game;
 import com.metype.hidenseek.Game.OutOfBoundsPlayer;
-import com.metype.hidenseek.Handlers.GameEndEvent;
-import com.metype.hidenseek.Handlers.GameStartEvent;
-import com.metype.hidenseek.Handlers.PlayerLeaveGameEvent;
+import com.metype.hidenseek.Events.GameEndEvent;
+import com.metype.hidenseek.Events.GameStartEvent;
+import com.metype.hidenseek.Events.PlayerLeaveGameEvent;
 import com.metype.hidenseek.Handlers.PlayerLeaveGameReason;
-import com.metype.hidenseek.Runnables.PlayGameRunnable;
 import com.metype.hidenseek.Runnables.StartGameRunnable;
 import com.metype.hidenseek.Serializers.GameSerializer;
 import org.bukkit.Bukkit;
-import org.bukkit.Location;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.plugin.Plugin;
@@ -26,15 +24,10 @@ import java.io.FilenameFilter;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.*;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import com.google.gson.Gson;
-import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.scheduler.BukkitRunnable;
-import org.bukkit.scheduler.BukkitTask;
 import org.checkerframework.checker.nullness.qual.NonNull;
 import org.checkerframework.checker.nullness.qual.Nullable;
 
@@ -214,7 +207,7 @@ public class GameManager {
         game.hiders.remove(playerID);
         game.seekers.remove(playerID);
 
-        CallEventSync(new PlayerLeaveGameEvent(gameKey, reason));
+        CallEventSync(new PlayerLeaveGameEvent(Bukkit.getPlayer(playerID), gameKey, reason));
 
         return PlayerLeaveGameError.Okay;
     }
